@@ -1,12 +1,1 @@
-# Python stuff
-__pycache__/
-
-
-# Ouput files and folders
-temporary_output.*
-temporary_output_folder/
-
-
-# Config file can be customized. That's why there is a config template file that the user should copy the content of and 
-# create their own Config.py file.
-Config.py
+__Pycache__

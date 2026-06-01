@@ -1,5 +1,5 @@
 import json
-import Config
+import GACPD_Output_Processing.Config as Config
 import os
 import sys
 
