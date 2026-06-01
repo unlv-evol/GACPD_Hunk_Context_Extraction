@@ -10,9 +10,9 @@ def get_GACPD_data_hierarchical(GACPD_project_address):
         
         if not PR_folder.endswith("MO") and not PR_folder.endswith("ED"):
             continue
-        if PR_folder.endswith("MO") and not Config.should_take_in_MO:
+        if PR_folder.endswith("MO") and not Config.should_take_in_MO_PRs:
             continue
-        if PR_folder.endswith("ED") and not Config.should_take_in_ED:
+        if PR_folder.endswith("ED") and not Config.should_take_in_ED_PRs:
             continue
 
 
