@@ -1,0 +1,20 @@
+#Create a "Config.py" file in the root directory and paste the content below to that file.
+
+
+#Directories
+GACPD_project_folder_name = "test_2"
+output_folder = "temporary_output_folder"
+GACPD_repos_results_folder = "C:/Users/pahla/Documents/Personals/Parham/Work/MOVis/MOVis_Release/Results/Repos_results" 
+
+#Controls
+should_json_be_hierarchical = False
+should_take_in_ED_PRs = False
+should_take_in_MO_PRs = True
+
+
+
+
+#CONSTANTS
+RESULT_FILE_NAME = "results.txt"
+REPORT_FILE_NAME = ""
+OUTPUT_FILE_SUFFIX_NAME = "GACPD_Metadata_Results.json"
