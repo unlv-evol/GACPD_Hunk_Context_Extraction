@@ -2,9 +2,9 @@
 
 
 #Directories
-GACPD_project_folder_name = "test_2"
-output_folder = "temporary_output_folder"
-GACPD_repos_results_folder = "C:/Users/pahla/Documents/Personals/Parham/Work/MOVis/MOVis_Release/Results/Repos_results" 
+GACPD_project_folder_name = ""
+output_folder = ""
+GACPD_repos_results_folder = "" 
 
 #Controls
 should_json_be_hierarchical = False
