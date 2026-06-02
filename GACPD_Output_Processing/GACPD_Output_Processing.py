@@ -1,5 +1,5 @@
 import json
-import GACPD_Output_Processing.Config as Config
+import Config
 import os
 import sys
 
@@ -159,12 +159,15 @@ def save_results_to_json(results):
         os.makedirs(Config.output_folder)
 
     if(Config.should_json_be_hierarchical) :
+        format_name_print = 'hierarchical'
         indent_value = 1
     else:
+        format_name_print = 'flat'
         indent_value = 4
     
     with open(output_file_address, "w", encoding="utf-8") as outfile:
         json.dump(results, outfile, indent= indent_value)
+        print(f'Done, {format_name_print} result summary saved to "{output_file_address}"')
 
 def get_GACPD_project_folder_address():
     GACPD_project_address = os.path.join(Config.GACPD_repos_results_folder, Config.GACPD_project_folder_name)
@@ -183,6 +186,7 @@ def main():
         results = get_GACPD_data_hierarchical(GACPD_project_address)
     else:
         results = get_GACPD_data_flat(GACPD_project_address)
+
 
     save_results_to_json(results)
 
