@@ -38,7 +38,7 @@ def get_GACPD_data_hierarchical(GACPD_project_address):
 
                 # Getting the data stored in the result file
                 result_extracted_data = {}
-                line_similarity_scores = {}
+                line_similarity_scores = []
                 with open(result_file_address, "r", encoding="utf-8") as opened_result_file:
                     for line in opened_result_file:
                         line = line.strip()
@@ -48,9 +48,7 @@ def get_GACPD_data_hierarchical(GACPD_project_address):
                         
                         # Handling the similarity score case
                         if line.startswith("src"):
-                            line_part_1, similarity_value = line.split(":", 1)
-                            similarity_line, _ = line_part_1.split("-", 1)
-                            line_similarity_scores[similarity_line.strip()] = similarity_value.strip()
+                            line_similarity_scores.append(line)
                             continue
                         # Handling all the other cases
                         else:
@@ -64,11 +62,27 @@ def get_GACPD_data_hierarchical(GACPD_project_address):
                     "source_repository": result_extracted_data.get("Mainline is"),
                     "target_repository": result_extracted_data.get("Divergent Repo is"),
                     "source_file": result_extracted_data.get("File"),
-                    "target_file": "",
-                    "clone_similarity": result_extracted_data.get("Similarity Scores")
+                    "target_file": ""
                 }
-                GACPD_file_extracted_data["target_file"] = GACPD_file_extracted_data["source_file"].replace(GACPD_file_extracted_data["source_repository"], GACPD_file_extracted_data["target_repository"])
+                target_file_long_name = result_extracted_data.get("Is called in Divergent Path is")
+                target_file_name = "/".join(target_file_long_name.split("/")[5:])
+                GACPD_file_extracted_data["target_file"] = target_file_name
                 
+                # Adding the clone similarity in a hierarchical format.
+                clone_similarities_hier = {}
+                for clone_similarity in result_extracted_data["Similarity Scores"]:
+                    hunk_file_address, rest_of_clone_similarity = clone_similarity.split('(')
+                    token_size = rest_of_clone_similarity.split(')')[0]
+                    similarity_percentage = clone_similarity.split(':')[1]
+                    
+                    if not token_size in clone_similarities_hier:
+                        clone_similarities_hier[token_size] = []
+    
+                    clone_similarities_hier[token_size].append(f'{hunk_file_address}-{similarity_percentage}')
+                
+                GACPD_file_extracted_data["clone_similarity"] = clone_similarities_hier
+
+
                 GACPD_file_saved_data.append(GACPD_file_extracted_data)
 
             classification_results = {
@@ -113,7 +127,7 @@ def get_GACPD_data_flat(GACPD_project_address):
 
                 # Getting the data stored in the result file
                 result_extracted_data = {}
-                line_similarity_scores = {}
+                line_similarity_scores = []
                 with open(result_file_address, "r", encoding="utf-8") as opened_result_file:
                     for line in opened_result_file:
                         line = line.strip()
@@ -123,9 +137,7 @@ def get_GACPD_data_flat(GACPD_project_address):
                         
                         # Handling the similarity score case
                         if line.startswith("src"):
-                            line_part_1, similarity_value = line.split(":", 1)
-                            similarity_line, _ = line_part_1.split("-", 1)
-                            line_similarity_scores[similarity_line.strip()] = similarity_value.strip()
+                            line_similarity_scores.append(line)
                             continue
                         # Handling all the other cases
                         else:
@@ -142,12 +154,27 @@ def get_GACPD_data_flat(GACPD_project_address):
                     "source_file": result_extracted_data.get("File"),
                     "target_file": "",
                     "file_classification" : classification_folder,
-                    "PR_classification": PR_classification,
-                    "clone_similarity": result_extracted_data.get("Similarity Scores")
+                    "PR_classification": PR_classification
                 }
-                source_repository_org, _ = GACPD_result_data["source_repository"].split('/',1)
-                target_repository_org, _ = GACPD_result_data["target_repository"].split('/',1)
-                GACPD_result_data["target_file"] = GACPD_result_data["source_file"].replace(source_repository_org,target_repository_org)
+                target_file_long_name = result_extracted_data.get("Is called in Divergent Path is")
+                target_file_name = "/".join(target_file_long_name.split("/")[5:])
+                GACPD_result_data["target_file"] = target_file_name
+                
+                # Making the clone smiliarity flat as well.
+                clone_similarities_hier = []
+                for clone_similarity in result_extracted_data["Similarity Scores"]:
+                    hunk_file_address = clone_similarity.split('(')[0].strip()
+                    token_size = clone_similarity.split('(')[1].split(')')[0].strip()
+                    similarity_percentage = clone_similarity.split(':')[1].strip()
+                    
+                    flat_similarity_result = f'{token_size}, {hunk_file_address}, {similarity_percentage}'
+
+                    clone_similarities_hier.append(flat_similarity_result)
+
+                GACPD_result_data["clone_similarity"] = clone_similarities_hier
+
+
+
                 results.append(GACPD_result_data)
     return results
 
@@ -160,7 +187,7 @@ def save_results_to_json(results):
 
     if(Config.should_json_be_hierarchical) :
         format_name_print = 'hierarchical'
-        indent_value = 1
+        indent_value = 2
     else:
         format_name_print = 'flat'
         indent_value = 4
