@@ -1,7 +1,20 @@
 import json
-import Config
 import os
 import sys
+import re
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.abspath(os.path.join(current_dir, ".."))
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
+import Config
+
+
+
+
+def natural_sort_key(s):
+    return [int(text) if text.isdigit() else text for text in re.split(r'(\d+)', s['hunk_file_address'])]
+
 
 def get_GACPD_data_hierarchical(GACPD_project_address):
 
@@ -77,9 +90,12 @@ def get_GACPD_data_hierarchical(GACPD_project_address):
                     
                     if not token_size in clone_similarities_hier:
                         clone_similarities_hier[token_size] = []
-    
-                    clone_similarities_hier[token_size].append(f'{hunk_file_address}-{similarity_percentage}')
-                
+                    hunk_address_and_percentage = {
+                        "hunk_file_address": hunk_file_address.strip(),
+                        "hunk_similarity_percentage": similarity_percentage.strip()
+                    }
+                    clone_similarities_hier[token_size].append(hunk_address_and_percentage)
+                    clone_similarities_hier[token_size].sort(key = natural_sort_key)
                 GACPD_file_extracted_data["clone_similarity"] = clone_similarities_hier
 
 
@@ -179,7 +195,7 @@ def get_GACPD_data_flat(GACPD_project_address):
     return results
 
 def save_results_to_json(results):
-    output_file_name = f'{ Config.GACPD_project_folder_name}_{Config.OUTPUT_FILE_SUFFIX_NAME}'
+    output_file_name = f'{ Config.GACPD_project_folder_name}_{Config.RESULT_OUTPUT_FILE_SUFFIX_NAME}'
     output_file_address = os.path.join(Config.output_folder, output_file_name)
 
     if not os.path.exists(Config.output_folder):
@@ -203,7 +219,7 @@ def get_GACPD_project_folder_address():
         sys.exit()
     return GACPD_project_address
 
-def main():
+def save_GACPD_result_data():
     if not Config.should_take_in_ED_PRs and not Config.should_take_in_MO_PRs:
         print('Error: The Config file currently is specifying that neither MO nor ED PRs are to be processed. Please select at least one of them to be processed')
         sys.exit()
@@ -218,4 +234,4 @@ def main():
     save_results_to_json(results)
 
 if __name__ == "__main__":
-    main()
+    save_GACPD_result_data()
