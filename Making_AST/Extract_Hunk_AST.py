@@ -34,7 +34,7 @@ def node_to_dict(node_is_import, node, source_code):
         }
 
         for child in node.children:
-            node_dict["children"].append(node_to_dict(child, source_code))
+            node_dict["children"].append(node_to_dict(False, child, source_code))
             
     return node_dict
 
@@ -74,7 +74,7 @@ def main():
     #********************************************************
     #****************** DEBUG SECTION ***********************
     java_file_address = 'temporary_test/test_file_light.java'
-    if not len(sys.argv) > 2:
+    if not len(sys.argv) >= 2:
         print('DEBUG ERROR: please provide line number as command line argumnet')
         print('USAGE: python Extract_Hunk_AST.py {line number}')
         sys.exit()
