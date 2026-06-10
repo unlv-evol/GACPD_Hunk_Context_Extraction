@@ -6,9 +6,12 @@ import tree_sitter_java as tsjava
 
 
 def node_to_dict(node_is_import, node, source_code):
+    """
+    Converts a tree-sitter node to a dictionary ready for json saving.
+    """
     
     if node_is_import:
-        import_nodes = node['import_node']
+        import_nodes = node['import_or_package_node']
         first_import_line = import_nodes[0].start_point[0]
         last_import_line = import_nodes[0].end_point[0]
         for individual_import_node in import_nodes:
@@ -42,7 +45,10 @@ def node_to_dict(node_is_import, node, source_code):
 
 
 def find_context_node(code_bytes, target_point_start, target_point_end):
-    
+    """
+    Finds the context of a section of the source code (in bytes). The section
+    is specified using its beginning and end line positions.
+    """
     context_is_import = False
     
     JAVA_LANGUAGE = Language(tsjava.language())
@@ -51,62 +57,70 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
     tree = parser.parse(code_bytes)
     node = tree.root_node.named_descendant_for_point_range(target_point_start, target_point_end)
 
+
     # If the node is an import node, we will only return the imports
-    # sections as context.
-    if node.type == "import_declaration":
-        query_string = "(import_declaration) @import_node"
+    # sections as immediate context and nothing for block context.
+    if node.type == "import_declaration" or node.type == "package_declaration":
+        query_string = """
+        (import_declaration) @import_or_package_node
+        (package_declaration) @import_or_package_node
+        """
         query = Query(JAVA_LANGUAGE, query_string)
         cursor = QueryCursor(query)
-        context = cursor.captures(tree.root_node)
+        immediate_context = cursor.captures(tree.root_node)
         context_is_import = True 
+        block_context = {}
     else:
-        #TODO: return the parent node and the encapsulating method/class declaration node.
-        context= node.parent
+        immediate_context = node.parent
+        block_context = node.parent
+        while(block_context.type != "class_declaration" and block_context.type != "method_declaration" and block_context.type != "program"):
+            block_context= block_context.parent
+        if immediate_context == block_context:
+            block_context = {}
+    return context_is_import, immediate_context, block_context
 
-    print(f'TEST PRING: PARENT TYPE: {node.parent.type}')
-    return context_is_import, context
 
 
 
-
-def main():
-
-    #********************************************************
-    #****************** DEBUG SECTION ***********************
-    java_file_address = 'temporary_test/test_file_light.java'
-    if not len(sys.argv) >= 2:
-        print('DEBUG ERROR: please provide line number as command line argumnet')
-        print('USAGE: python Extract_Hunk_AST.py {line number}')
-        sys.exit()
-
-    target_point_start = (int(sys.argv[1]), 0)
-    target_point_end = (int(sys.argv[1]), 0)
-    #********************************************************
-    #********************************************************
+def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end_line):
     
     with open(java_file_address) as java_file:
         java_code = java_file.read()
         code_bytes = bytes(java_code, "utf8")
-        context_is_import, context = find_context_node(code_bytes, target_point_start, target_point_end)
-        context_AST_dict = node_to_dict(context_is_import, context, code_bytes)
+        target_point_start = (hunk_start_line, 0)
+        target_point_end = (hunk_end_line, 0)
+        context_is_import, immediate_context, block_context = find_context_node(code_bytes, target_point_start, target_point_end)
+
+        immediate_context_AST_dict = node_to_dict(context_is_import, immediate_context, code_bytes)
+        
         if context_is_import: 
-            context_source_code = java_code.splitlines()[int(context_AST_dict['first import line']):int(context_AST_dict['last import line'])+1]
+            immediate_context_source_code = java_code.splitlines()[int(immediate_context_AST_dict['first import line']):int(immediate_context_AST_dict['last import line'])+1]
+            block_context_source_code = ""
+            block_context_AST_dict = {}
         else:
-            context_source_code = java_code.splitlines()[context.start_point[0]:context.end_point[0]+1]
+            immediate_context_source_code = java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
+            # Sometiems the block context and immediate context are the same, in which case to preserve space we don't 
+            # write the block context (the find_context_node function above returns a null block_context).
+            if block_context:
+                block_context_source_code = java_code.splitlines()[block_context.start_point[0]:block_context.end_point[0]+1]
+                block_context_AST_dict = node_to_dict(context_is_import, block_context, code_bytes)
+            else:
+                block_context_source_code = ""
+                block_context_AST_dict = {}
 
         context_output = {
             "Is Context Import" : context_is_import,
-            "Context AST Representaion": context_AST_dict,
-            "Context Source Code": context_source_code
+            "Immediate Context AST Representaion": immediate_context_AST_dict,
+            "Block Context AST Representation": block_context_AST_dict,
+            "Immediate Context Source Code": immediate_context_source_code,
+            "Block Context Source Code": block_context_source_code
+
         }
 
 
-        with open('temporary_output_folder/test_context_output.json', 'w', encoding = "utf-8") as output_json:
-            json.dump(context_output, output_json, indent= 2)
+        return context_output
 
 
-if __name__ == "__main__":
-    main()
 
 
 
