@@ -62,10 +62,7 @@ def get_GACPD_hunk_info():
 
             for file_folder in os.listdir(classification_folder_address):
                 
-                file_info={
-                        "file name" : file_folder,
-                        "file hunk info": []
-                    } 
+                
                                     
                 source_folder_address = os.path.join(classification_folder_address, file_folder, Config.SOURCE_FOLDER_NAME)
                 
@@ -97,14 +94,12 @@ def get_GACPD_hunk_info():
                     hunk_associated_target_file = os.path.join(Config.GACPD_results_folder, hunk_associated_target_file_incomplete)
                     hunk_associated_source_file = hunk_associated_source_file.replace('\\', '/')
                     hunk_associated_target_file = hunk_associated_target_file.replace('\\', '/')
-
-                    
-                file_hunks_line_numbers = {
-                    "source hunks associated file": hunk_associated_source_file,
-                    "source hunk line numbers": [],
-                    "target hunk associated file": hunk_associated_target_file,
-                    "target hunk line numbers": []
-                }
+                    file_info={
+                        "file name" : file_folder,
+                        "source file address": hunk_associated_source_file,
+                        "target file address": hunk_associated_target_file,
+                        "file hunk info": []
+                    } 
 
                 # The patch file contains the "origin point" of the source hunk. The report file 
                 # contains the "start line offset" and "end line offset" of the source file, and the 
@@ -118,37 +113,41 @@ def get_GACPD_hunk_info():
                             hunk_count += 1
                             line_sections = line.split('@')
                             source_hunk_line_origin_points.append(abs(int(line_sections[2].split(',')[0])))
-                
                     with open(report_file_address) as report_file:
-                            
+                        
                         report_file_data = json.load(report_file)
                         report_file_hunk_info = report_file_data["duplicates"]
-                        for hunk_index, individual_hunk_info in enumerate(report_file_hunk_info):
+                        file_hunks_line_info = {
+                            "source hunk info": [],
+                            "target hunk info": []
+                        }
 
+                        file_hunks_line_info = []
+                        for individual_hunk_info in report_file_hunk_info:
                             hunk_number = individual_hunk_info["firstFile"]["name"].split('_')[1]
 
                             source_hunk_start_line_offset_number = individual_hunk_info["firstFile"]["start"]
                             source_hunk_end_line_offset_number = individual_hunk_info["firstFile"]["end"]
 
-                            source_hunk_line_info = {
+                            source_hunk_info = {
                                 "hunk file name": individual_hunk_info["firstFile"]["name"],
                                 "hunk line start": source_hunk_line_origin_points[int(hunk_number) - 1] + source_hunk_start_line_offset_number,
                                 "hunk line end": source_hunk_line_origin_points[int(hunk_number) - 1] + source_hunk_end_line_offset_number
                             }
-                            file_hunks_line_numbers["source hunk line numbers"].append(source_hunk_line_info)
-                            file_hunks_line_numbers["source hunk line numbers"].sort(key = natural_sort_key)
                             target_hunk_start_line_number = individual_hunk_info["secondFile"]["start"]
                             target_hunk_end_line_number = individual_hunk_info["secondFile"]["end"]
-                            target_hunk_line_info = {
+                            target_hunk_info = {
                                 "hunk file name":individual_hunk_info["secondFile"]["name"],
                                 "hunk line start": target_hunk_start_line_number,
                                 "hunk line end": target_hunk_end_line_number
                             }
-                            file_hunks_line_numbers["target hunk line numbers"].append(target_hunk_line_info)
-                            file_hunks_line_numbers["target hunk line numbers"].sort(key = natural_sort_key)
-
-                            file_info["file hunk info"].append(file_hunks_line_numbers)
-                    
+                            pair_hunk_line_info = {
+                                "source hunk": source_hunk_info,
+                                "target hunk": target_hunk_info
+                            }
+                            file_hunks_line_info.append(pair_hunk_line_info)
+                        
+                        file_info["file hunk info"].append(file_hunks_line_info)
 
                 classification_info["files"].append(file_info)
             PR_info["classifications"].append(classification_info)
@@ -158,7 +157,7 @@ def get_GACPD_hunk_info():
     return general_info
 
 def save_results_to_json(results):
-    output_file_name = f'{ Config.GACPD_project_folder_name}_{Config.PATCH_OUTPUT_FILE_SUFFIX_NAME}'
+    output_file_name = f'{ Config.GACPD_project_folder_name}_{Config.HUNK_INFO_OUTPUT_FILE_SUFFIX_NAME}'
     output_file_address = os.path.join(Config.output_folder, output_file_name)
 
     if not os.path.exists(Config.output_folder):

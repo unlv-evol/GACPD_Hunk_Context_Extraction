@@ -43,7 +43,7 @@ RESULT_OUTPUT_FILE_SUFFIX_NAME = "GACPD_Results_Processed.json"
 # Constants
 SOURCE_FOLDER_NAME = "src/"
 PATCH_FILE_SUFFIX = ".patch"
-PATCH_OUTPUT_FILE_SUFFIX_NAME = "GACPD_Patch_Processed.json"
+HUNK_INFO_OUTPUT_FILE_SUFFIX_NAME = "GACPD_Hunk_Info.json"
 
 
 
