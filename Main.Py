@@ -7,9 +7,6 @@ from GACPD_Output_Processing.GACPD_Result_Processing import save_GACPD_result_da
 from Making_AST.GACPD_Hunk_Info_Processing import get_GACPD_hunk_info
 from Making_AST.Extract_Hunk_AST import extract_hunk_context_from_file
 
-
-
-
 def get_safe_abs_path(file_path):
      """
      Returns OS safe absolute paths. Will return long paths for Windows
@@ -20,8 +17,6 @@ def get_safe_abs_path(file_path):
           abs_path = os.path.abspath(file_path)   
 
      return abs_path
-
-
 
 def main ():
      parser = argparse.ArgumentParser()
@@ -127,21 +122,5 @@ def main ():
           if args.DebugPrint:
                print('\n**********************************************\n')
                     
-                    
-
-
-
-     context_tree =extract_hunk_context_from_file('Making_AST/temporary_test/test_file_light.java', 24, 24)
-
-
-
-
-     with open('Making_AST/temporary_output_folder/test_context_output.json', 'w', encoding = "utf-8") as output_json:
-               json.dump(context_tree, output_json, indent= 2)
-
-
-
-
-
 if __name__ == "__main__":
     main()
