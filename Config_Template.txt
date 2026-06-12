@@ -1,66 +1,29 @@
-
-
-
+# *******************************************
+# *****************Directories***************
+# *******************************************
+output_folder = ""
+GACPD_project_folder_name = ""
+GACPD_repos_results_folder = ""
+GACPD_results_folder = ""
 
 
 # *******************************************
 # ******************Controls*****************
 # *******************************************
-
-
-# Directories
-GACPD_project_folder_name =
-output_folder =
-
-
-# Result Processing
-should_json_be_hierarchical = True
-
-
-# Global
 should_take_in_ED_PRs = False
 should_take_in_MO_PRs = True
-
 should_take_in_ED_files = False
 should_take_in_MO_files = True
 
+should_json_be_hierarchical = True
 
-# Constants
+
+# *******************************************
+# ******************Constants*****************
+# *******************************************
 RESULT_FILE_NAME = "results.txt"
 RESULT_OUTPUT_FILE_SUFFIX_NAME = "GACPD_Results_Processed.json"
-
-
-
-
-
-#*********************************************************
-#*********************MAKING AST TREES********************
-#*********************************************************
-
-
-
-
-# Constants
 SOURCE_FOLDER_NAME = "src/"
 PATCH_FILE_SUFFIX = ".patch"
 HUNK_INFO_OUTPUT_FILE_SUFFIX_NAME = "GACPD_Hunk_Info.json"
-
-
-
-
-#*********************************************************
-#***********************GLOBAL INFO***********************
-#*********************************************************
-
-
-# Controls
-
-
-
-
-
-# Directories
-
-GACPD_repos_results_folder =
-GACPD_results_folder =
-
+HUNK_CONTEXT_OUTPUT_FOLDER_NAME = "Hunk_Contexts"

@@ -71,11 +71,18 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
         context_is_import = True 
         block_context = {}
     else:
+        if node.type == "program":
+            block_context= {}
+            return False, node, {}
+    
         immediate_context = node.parent
-        block_context = node.parent
-        while(block_context.type != "class_declaration" and block_context.type != "method_declaration" and block_context.type != "program"):
-            block_context= block_context.parent
-        if immediate_context == block_context:
+        if immediate_context.type != "program":
+            block_context = node.parent
+            while(block_context.type != "class_declaration" and block_context.type != "method_declaration" and block_context.type != "program"):
+                block_context= block_context.parent
+            if immediate_context == block_context:
+                block_context = {}
+        else:
             block_context = {}
     return context_is_import, immediate_context, block_context
 
@@ -108,17 +115,20 @@ def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end
                 block_context_source_code = ""
                 block_context_AST_dict = {}
 
-        context_output = {
+        context_AST_output = {
             "Is Context Import" : context_is_import,
             "Immediate Context AST Representaion": immediate_context_AST_dict,
-            "Block Context AST Representation": block_context_AST_dict,
+            "Block Context AST Representation": block_context_AST_dict
+        }
+
+        context_source_code_output = {
+            "Is Context Import" : context_is_import,
             "Immediate Context Source Code": immediate_context_source_code,
             "Block Context Source Code": block_context_source_code
-
         }
 
 
-        return context_output
+        return context_AST_output, context_source_code_output
 
 
 

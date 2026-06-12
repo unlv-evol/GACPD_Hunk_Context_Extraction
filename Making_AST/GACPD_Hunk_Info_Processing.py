@@ -147,7 +147,7 @@ def get_GACPD_hunk_info():
                             }
                             file_hunks_line_info.append(pair_hunk_line_info)
                         
-                        file_info["file hunk info"].append(file_hunks_line_info)
+                        file_info["file hunk info"] = file_hunks_line_info
 
                 classification_info["files"].append(file_info)
             PR_info["classifications"].append(classification_info)
