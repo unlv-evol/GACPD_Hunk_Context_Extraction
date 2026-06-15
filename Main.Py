@@ -86,39 +86,40 @@ def main ():
                          if not os.path.isdir(target_hunk_folder_address):
                               os.makedirs(target_hunk_folder_address)
 
-                         # Retrieving the source hunk context
-                         context_AST, context_source_code = extract_hunk_context_from_file(file['source file address'], 
-                                                                                           hunk_pair["source hunk"]["hunk line start"],
-                                                                                           hunk_pair["source hunk"]["hunk line end"])
-                         # The "\\\\?\\" is because there is a possibility that windows will not register some 
-                         # of the longer file paths, and so with that mark we can tell windows to accespt the 
-                         # longer file paths.
-                         source_context_AST_address = os.path.join(source_hunk_folder_address,
-                                                                      f'AST_{source_hunk_folder_name}.json')
-                         
-                         with open(source_context_AST_address, "w", encoding="utf-8") as outfile:
-                              json.dump(context_AST, outfile, indent= 2)
-                         
-                         source_context_SC_address = os.path.join(source_hunk_folder_address,
-                                                                      f'SC_{source_hunk_folder_name}.json')
-                         
-                         with open(source_context_SC_address, "w", encoding = "utf-8") as outfile:
-                              json.dump(context_source_code, outfile, indent = 4)
-                         
-                         
-                         # Retrieving the target hunk context
-                         context_AST, context_source_code = extract_hunk_context_from_file(file['target file address'], 
-                                                                                           hunk_pair["target hunk"]["hunk line start"],
-                                                                                           hunk_pair["target hunk"]["hunk line end"])
-                         target_context_AST_address =  os.path.join(target_hunk_folder_address,
-                                                                      f'AST_{target_hunk_folder_name}.json')
-                         with open(target_context_AST_address, "w", encoding="utf-8") as outfile:
-                              json.dump(context_AST, outfile, indent= 2)
-                         
-                         target_context_SC_address =  os.path.join(target_hunk_folder_address,
-                                                                      f'SC_{target_hunk_folder_name}.json')
-                         with open(target_context_SC_address, "w", encoding = "utf-8") as outfile:
-                              json.dump(context_source_code, outfile, indent = 4)
+                         if os.path.isfile(file['source file address']):
+                              # Retrieving the source hunk context
+                              context_AST, context_source_code = extract_hunk_context_from_file(file['source file address'], 
+                                                                                               hunk_pair["source hunk"]["hunk line start"],
+                                                                                               hunk_pair["source hunk"]["hunk line end"])
+                              # The "\\\\?\\" is because there is a possibility that windows will not register some 
+                              # of the longer file paths, and so with that mark we can tell windows to accespt the 
+                              # longer file paths.
+                              source_context_AST_address = os.path.join(source_hunk_folder_address,
+                                                                           f'AST_{source_hunk_folder_name}.json')
+                              
+                              with open(source_context_AST_address, "w", encoding="utf-8") as outfile:
+                                   json.dump(context_AST, outfile, indent= 2)
+                              
+                              source_context_SC_address = os.path.join(source_hunk_folder_address,
+                                                                           f'SC_{source_hunk_folder_name}.json')
+                              
+                              with open(source_context_SC_address, "w", encoding = "utf-8") as outfile:
+                                   json.dump(context_source_code, outfile, indent = 4)
+                              
+                         if os.path.isfile(file['target file address']):
+                              # Retrieving the target hunk context
+                              context_AST, context_source_code = extract_hunk_context_from_file(file['target file address'], 
+                                                                                               hunk_pair["target hunk"]["hunk line start"],
+                                                                                               hunk_pair["target hunk"]["hunk line end"])
+                              target_context_AST_address =  os.path.join(target_hunk_folder_address,
+                                                                           f'AST_{target_hunk_folder_name}.json')
+                              with open(target_context_AST_address, "w", encoding="utf-8") as outfile:
+                                   json.dump(context_AST, outfile, indent= 2)
+                              
+                              target_context_SC_address =  os.path.join(target_hunk_folder_address,
+                                                                           f'SC_{target_hunk_folder_name}.json')
+                              with open(target_context_SC_address, "w", encoding = "utf-8") as outfile:
+                                   json.dump(context_source_code, outfile, indent = 4)
           if args.DebugPrint:
                print('\n**********************************************\n')
                     
