@@ -24,7 +24,9 @@ def get_GACPD_hunk_info():
 
     general_info = []
     for PR_folder in os.listdir(GACPD_project_address):
-
+        # Skipping hidden files that might exist due to various reasons (like OS interference)
+        if PR_folder.startswith('.'):
+            continue
         # Skipping undesired PR classifications
         if not PR_folder.endswith("MO") and not PR_folder.endswith("ED"):
             continue
@@ -43,7 +45,8 @@ def get_GACPD_hunk_info():
         
 
         for classification_folder in os.listdir(PR_folder_address):
-
+            if classification_folder.startswith('.'):
+                continue
             # Skipping undesired file classifications.
             if not classification_folder.endswith('ED') and not classification_folder.endswith('MO'):
                 continue
@@ -61,7 +64,8 @@ def get_GACPD_hunk_info():
 
 
             for file_folder in os.listdir(classification_folder_address):
-                
+                if file_folder.startswith('.'):
+                    continue
                 
                                     
                 source_folder_address = os.path.join(classification_folder_address, file_folder, Config.SOURCE_FOLDER_NAME)
