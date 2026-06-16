@@ -85,11 +85,19 @@ def get_GACPD_hunk_info():
                 with open(result_file_address, "r", encoding= "utf-8") as opened_result_file:
                     for line in opened_result_file:
                         line = line.strip()
+                        # Extracts the name of the source repository. This will be used to reconstruct
+                        # the address of the source repository absolutely.
                         if line.startswith('Mainline'):
                             source_repo_name = line.split(':',1)[1].strip()
+                        # The source file regardless of whether it was renamed or not
                         if line.startswith('File:'):
                             hunk_associated_source_file_incomplete = line.split(':', 1)[1].strip()
-                        if line.startswith('Is called in Divergent'): 
+                        # For when the target repository has not been renamed
+                        if line.startswith('Is called in Divergent Path is'): 
+                            hunk_associated_target_file_extra = line.split(':', 1)[1]
+                            hunk_associated_target_file_incomplete = '/'.join(hunk_associated_target_file_extra.split('/')[1:])
+                        # For when the target repository has been renamed
+                        if line.startswith('Renamed Divergent Path is'): 
                             hunk_associated_target_file_extra = line.split(':', 1)[1]
                             hunk_associated_target_file_incomplete = '/'.join(hunk_associated_target_file_extra.split('/')[1:])
 
