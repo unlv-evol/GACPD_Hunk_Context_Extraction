@@ -132,6 +132,130 @@ def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end
 
 
 
+def find_around_context(context_node):
+    """
+    Should return prev method, next method, prev class, next class
+    """
+    if not context_node.type == "method_declaration" and not context_node.type == "class_declaration":
+        while not context_node.type == "method_declaration" and not context_node.type == "class_declaration" and not context_node.type == "program":
+            context_node = context_node.parent
+        
+    previous_class,next_class,previous_method,next_method = {}
+    
+    if context_node.type == "class_declaration":
+        # PREVIOUS CLASS
+        previous_sibling = context_node.prev_named_sibling
+        if previous_sibling:
+            while previous_sibling.type != "class_declaration":
+                previous_sibling = previous_sibling.prev_named_sibling
+                if not previous_sibling:
+                    break
+        previous_class = previous_sibling
 
+        # NEXT CLASS
+        next_sibling = context_node.next_named_sibling
+        if next_sibling:
+            while next_sibling.type != "class_declaration":
+                next_sibling = next_sibling.next_named_sibling
+                if not next_sibling:
+                    break
+        next_class = next_sibling
+        
+        # PREVIOUS METHOD
+        previous_method = {}
+        # NEXT METHOD
+        next_method = {}
+
+    if context_node.type == "method_declaration":
+        # PREVIOUS CLASS
+        previous_sibling = context_node.prev_named_sibling
+        if previous_sibling:
+            while previous_sibling.type != "class_declaration":
+                previous_sibling = previous_sibling.prev_named_sibling
+                if not previous_sibling:
+                    break
+        previous_class = previous_sibling
+
+        # NEXT CLASS
+        next_sibling = context_node.next_named_sibling
+        if next_sibling:
+            while next_sibling.type != "class_declaration":
+                next_sibling = next_sibling.next_named_sibling
+                if not next_sibling:
+                    break
+        next_class = next_sibling
+
+        # PREVIOUS METHOD
+        previous_sibling = context_node.prev_named_sibling
+        if previous_sibling:
+            while previous_sibling.type != "method_declaration":
+                previous_sibling = previous_sibling.prev_named_sibling
+                if not previous_sibling:
+                    break
+        previous_method = previous_sibling
+
+        # NEXT METHOD
+        next_sibling = context_node.next_named_sibling
+        if next_sibling:
+            while next_sibling.type != "method_declaration":
+                next_sibling = next_sibling.next_named_sibling
+                if not next_sibling:
+                    break
+        next_method = next_sibling
+    
+    return previous_method, next_method, previous_class, next_class
+
+def main():
+
+    test_hunk_start_line = 137
+    test_hunk_end_line = 137
+    test_file = "temporary_test/test_file_light.java"
+    with open(test_file) as java_file:
+        java_code = java_file.read()
+        code_bytes = bytes(java_code, "utf8")
+        target_point_start = (test_hunk_start_line, 0)
+        target_point_end = (test_hunk_end_line, 0)
+        context_is_import, immediate_context, block_context = find_context_node(code_bytes, target_point_start, target_point_end)
+
+
+    prev_method, next_method, prev_class, next_class = find_around_context(immediate_context)
+
+    with open('temporary_output_folder/around_context.json', 'w') as outfile:
+        if immediate_context:
+            immediate_context_text =  java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
+        else:
+            immediate_context_text= ""
+        if prev_method:
+            prev_method_text = java_code.splitlines()[prev_method.start_point[0]:prev_method.end_point[0]+1]
+        else:
+            prev_method_text = ""
+        if next_method:
+            next_method_text = java_code.splitlines()[next_method.start_point[0]:next_method.end_point[0]+1]
+        else:
+            next_method_text = ""
+        if prev_class:
+            prev_class_text= java_code.splitlines()[prev_class.start_point[0]:prev_class.end_point[0]+1]
+        else:
+            prev_class_text = ""
+        if next_class:
+            next_class_text = java_code.splitlines()[next_class.start_point[0]:next_class.end_point[0]+1]
+        else:
+            next_class_text = ""
+        test_output_dic = {
+            "immediate context type": immediate_context.type,
+            "prev method": prev_method_text,
+            "next method": next_method_text,
+            "prev class": prev_class_text,
+            "next class": next_class_text
+        }
+
+
+
+        json.dump(test_output_dic, outfile, indent = 2)
+
+    
+
+if __name__ == "__main__":
+    main()
 
 
