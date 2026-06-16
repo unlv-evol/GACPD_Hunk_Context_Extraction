@@ -7,7 +7,19 @@ import tree_sitter_java as tsjava
 
 def node_to_dict(node_is_import, node, source_code):
     """
-    Converts a tree-sitter node to a dictionary ready for json saving.
+    Converts a tree-sitter node to a dictionary ready for json saving and debug printing.
+
+    Parameters
+    ----------
+    node_is_import :    A boolean that specifies whether the provided context node is "import" context node.
+    node :              The context node from which the data for the dictionary will be extracted.
+    source_code :       The source code that contains the text of the node. The source code should be in bytes.
+
+    Returns
+    -------
+    node_dict :         A dictionary that contains the info for the context to either be printed or saved.
+                        The format of the dictionary might change depending on whether the provided context 
+                        node is "import" context or not.
     """
     
     if node_is_import:
@@ -46,8 +58,24 @@ def node_to_dict(node_is_import, node, source_code):
 
 def find_context_node(code_bytes, target_point_start, target_point_end):
     """
-    Finds the context of a section of the source code (in bytes). The section
-    is specified using its beginning and end line positions.
+    Finds and returns the context of a section of the source code.
+
+    Parameters
+    ----------
+    code_bytes : The source code of the specified hunk in bytes.
+    target_point_start: A tuple that specifies the beginning row and column of the hunk.
+    target_point_end : A tuple that specifies the ending row and cloumn of the hunk.
+
+    Returns
+    -------
+    context_is_import : A boolean that specifies if the context of the hunk is an "import" context,
+                        meaning that it only contains "import" and "package" lines.
+    immediate_context : The immediate context of the hunk. This can be a try block or an if block. 
+    block_context :     The "block" context of the hunk. The type of this context will 
+                        always be one of method declaration, class declaration, or program.
+                        NOTE: If the immediate_context and block_context are equal to each other, 
+                        then block_context will be return empty and immediate_context will represent
+                        both of them (since they are equal).
     """
     context_is_import = False
     
@@ -88,8 +116,25 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
 
 
 
-
+#TODO: Change this function's name to better indicate what it actually does and 
+#      remove any confusion about its difference with the 'find_context_node' function.
 def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end_line):
+    """
+    Returns the context of a hunk based on its starting and ending lines.
+
+    Parameters
+    ----------
+    java_file_address : Address of the original file that contains the specified hunk (and other hunks).
+    hunk_start_line : The starting line of the hunk. This is inclusive.
+    hunk_end_line : The ending line of the hunk. This is inclusive.
+
+    Returns
+    -------
+    context_AST_output :    The Abstract Syntax Tree representation of the context of the provided hunk.
+                            Will contain both the immediate and block contexts.
+    context_source_code_output :    The associated source code of the context of the provided hunk.
+                                    Will contain both the immediate and block contexts.
+    """
     
     with open(java_file_address) as java_file:
         java_code = java_file.read()
@@ -132,9 +177,21 @@ def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end
 
 
 
-def find_around_context(context_node):
+def find_adjacent_context(context_node):
     """
-    Should return prev method, next method, prev class, next class
+    Returns the previous and next method and class relative to the provided context node
+
+    Parameters
+    ----------
+    context_node : Tree-sitter node. Does not have to be a "block context"
+
+    Returns
+    -------
+    previous_method : context of the previous method relative to the provided context node
+    next_method : context of the next method relative to the provided context node
+    previous_class : context of the previous class relative to the provided context node
+    next_class : context of the next class relative to the provided context node
+    
     """
     if not context_node.type == "method_declaration" and not context_node.type == "class_declaration":
         while not context_node.type == "method_declaration" and not context_node.type == "class_declaration" and not context_node.type == "program":
@@ -217,8 +274,8 @@ def find_around_context(context_node):
 
 def main():
 
-    test_hunk_start_line = 266
-    test_hunk_end_line = 266
+    test_hunk_start_line = 20
+    test_hunk_end_line = 25
     test_file = "temporary_test/test_file_light.java"
     with open(test_file) as java_file:
         java_code = java_file.read()
@@ -228,7 +285,7 @@ def main():
         context_is_import, immediate_context, block_context = find_context_node(code_bytes, target_point_start, target_point_end)
 
 
-    prev_method, next_method, prev_class, next_class = find_around_context(immediate_context)
+    prev_method, next_method, prev_class, next_class = find_adjacent_context(immediate_context)
 
     with open('temporary_output_folder/around_context.json', 'w') as outfile:
         if immediate_context:
