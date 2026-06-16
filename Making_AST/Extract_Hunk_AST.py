@@ -140,7 +140,7 @@ def find_around_context(context_node):
         while not context_node.type == "method_declaration" and not context_node.type == "class_declaration" and not context_node.type == "program":
             context_node = context_node.parent
         
-    previous_class,next_class,previous_method,next_method = {}
+    previous_class,next_class,previous_method,next_method = [{} for _ in range(4)]
     
     if context_node.type == "class_declaration":
         # PREVIOUS CLASS
@@ -167,23 +167,6 @@ def find_around_context(context_node):
         next_method = {}
 
     if context_node.type == "method_declaration":
-        # PREVIOUS CLASS
-        previous_sibling = context_node.prev_named_sibling
-        if previous_sibling:
-            while previous_sibling.type != "class_declaration":
-                previous_sibling = previous_sibling.prev_named_sibling
-                if not previous_sibling:
-                    break
-        previous_class = previous_sibling
-
-        # NEXT CLASS
-        next_sibling = context_node.next_named_sibling
-        if next_sibling:
-            while next_sibling.type != "class_declaration":
-                next_sibling = next_sibling.next_named_sibling
-                if not next_sibling:
-                    break
-        next_class = next_sibling
 
         # PREVIOUS METHOD
         previous_sibling = context_node.prev_named_sibling
@@ -202,13 +185,40 @@ def find_around_context(context_node):
                 if not next_sibling:
                     break
         next_method = next_sibling
+
+        # Finding the encapsulating class for the method
+        while(context_node.type != "class_declaration" and context_node.type != "program"):
+            context_node = context_node.parent
+            if not context_node:
+                break
+        
+        if context_node:
+            if context_node.type == "class_declaration":
+                # PREVIOUS CLASS
+                previous_sibling = context_node.prev_named_sibling
+                if previous_sibling:
+                    while previous_sibling.type != "class_declaration":
+                        previous_sibling = previous_sibling.prev_named_sibling
+                        if not previous_sibling:
+                            break
+                previous_class = previous_sibling
+
+                # NEXT CLASS
+                next_sibling = context_node.next_named_sibling
+                if next_sibling:
+                    while next_sibling.type != "class_declaration":
+                        next_sibling = next_sibling.next_named_sibling
+                        if not next_sibling:
+                            break
+                next_class = next_sibling
+
     
     return previous_method, next_method, previous_class, next_class
 
 def main():
 
-    test_hunk_start_line = 137
-    test_hunk_end_line = 137
+    test_hunk_start_line = 266
+    test_hunk_end_line = 266
     test_file = "temporary_test/test_file_light.java"
     with open(test_file) as java_file:
         java_code = java_file.read()
