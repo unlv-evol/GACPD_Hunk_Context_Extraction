@@ -122,10 +122,28 @@ def is_context_in_method (context_node):
     return False
 
 def is_context_in_class (context_node):
-    pass
+    if not context_node:
+        return False
+    if context_node.type == "program":
+        return False
+    while context_node.parent:
+        if context_node.type == "class_declaration":
+            return True
+        context_node = context_node.parent
+    
+    return False
 
 def is_context_in_class_or_method (context_node):
-    pass
+    if not context_node:
+        return False
+    if context_node.type == "program":
+        return False
+    while context_node.parent:
+        if context_node.type == "method_declaration" or context_node.type == "class_declaration":
+            return True
+        context_node = context_node.parent
+    
+    return False
 
 def is_context_import_mode (context_node):
     if not context_node:
