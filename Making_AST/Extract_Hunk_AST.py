@@ -3,6 +3,142 @@ import sys
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
 
+# region UTIL FUNCTIONS
+
+# Getters
+def get_context_parent_class(context_node):
+    """
+    Gets the class that contains the provided context node.
+
+    Parameters
+    ----------
+    context_node : A context that is located in a class.
+
+    Returns
+    -------
+    context_node : The context of the parent class of the provided input context.
+    """
+    if context_node:
+        while context_node.type != "class_declaration" and context_node.type != "program":
+            context_node = context_node.parent
+            if not context_node:
+                return {}
+        
+        if context_node.type == "program":
+            return {}
+        
+    return context_node
+
+def get_context_parent_method (context_node):
+    """
+    Gets the parent method of the provided context.
+
+    Parameters
+    ----------
+    context_node : The context that is located in a method.
+
+    Returns
+    -------
+    context_node : The context of the parent method.
+    """
+    if context_node:
+        while context_node.type != "class_declaration" and context_node.type != "program" and context_node.type != "method_declaration":
+            context_node = context_node.parent
+            if not context_node:
+                return {}
+        
+        if context_node.type == "program" or context_node.type == "class_declaration":
+            return {}
+        
+    return context_node
+
+def get_context_parent_block (context_node):
+    """
+    Gets either the method or the class that contains the provided context_node.
+
+    Parameters
+    ----------
+    context_node : The tree-sitter node to find the context parent block of.
+
+    Returns
+    -------
+    context_node : The parent block of the provided context.
+    """
+    if context_node:
+        while context_node.type != "class_declaration" and context_node.type != "program" and context_node.type != "method_declaration":
+            context_node = context_node.parent
+            if not context_node:
+                return {}
+        
+        if context_node.type == "program" :
+            return {}
+
+    return context_node
+
+def get_method_signature (method_context_node, source_code: bytes) -> str:
+    """
+    Returns a string that contains the signature part of a method
+
+    Parameters
+    ----------
+    method_context_node : The tree-sitter node of the targeted method.
+    source_code : The source code of the file that contains the method, in bytes.
+
+    Returns
+    -------
+    method_signature : A string that contains the signature of the method.
+    """
+    if not method_context_node:
+        print('WARNING: Passed null method context node to get_method_signature')
+        return""
+    if method_context_node.type != "method_declaration":
+        print(f'WARNING: Passed non-method node to get_method_signature. The node is {method_context_node.type}')   
+        return""
+    
+    signature_parts = []
+    for child in method_context_node.children:
+        if child.type == 'block':
+            break
+
+        signature_parts.append(source_code[child.start_byte:child.end_byte].decode('utf-8'))
+
+    method_signature = " ".join(signature_parts).strip()
+    method_signature = method_signature.replace(' (', '(')
+
+    return method_signature
+
+# Predicates
+
+def is_context_in_method (context_node):
+    if not context_node:
+        return False
+    if context_node.type == "program":
+        return False
+    while context_node.parent:
+        if context_node.type == "method_declaration":
+            return True
+        context_node = context_node.parent
+    
+    return False
+
+def is_context_in_class (context_node):
+    pass
+
+def is_context_in_class_or_method (context_node):
+    pass
+
+def is_context_import_mode (context_node):
+    if not context_node:
+        return False
+    
+    # Sometimes a dict of import nodes might be passed into this function.
+    if 'import_or_package_node' in context_node:
+        return True
+    if context_node.type == "import_declaration" or context_node.type == "package_declaration":
+        return True
+    return False
+
+# endregion
 
 
 def node_to_dict(node_is_import, node, source_code):
@@ -274,8 +410,8 @@ def find_adjacent_context(context_node):
 
 def main():
 
-    test_hunk_start_line = 20
-    test_hunk_end_line = 25
+    test_hunk_start_line = 35
+    test_hunk_end_line = 35
     test_file = "temporary_test/test_file_light.java"
     with open(test_file) as java_file:
         java_code = java_file.read()
@@ -284,7 +420,17 @@ def main():
         target_point_end = (test_hunk_end_line, 0)
         context_is_import, immediate_context, block_context = find_context_node(code_bytes, target_point_start, target_point_end)
 
+    
+    if not is_context_import_mode(immediate_context): 
+        if is_context_in_method(immediate_context):
+            print_thing = 'is'
+        else:
+            print_thing = 'is not'
+    else:
+        print_thing = 'is not'
+    print(f'the provided context {print_thing} in a function')
 
+    sys.exit()
     prev_method, next_method, prev_class, next_class = find_adjacent_context(immediate_context)
 
     with open('temporary_output_folder/around_context.json', 'w') as outfile:
