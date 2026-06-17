@@ -2,6 +2,9 @@ import json
 import sys
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
+# region GLOBAL VARIABLES
+context_is_import_mode = False
+# endregion
 
 # region UTIL FUNCTIONS
 
@@ -145,19 +148,13 @@ def is_context_in_class_or_method (context_node):
     
     return False
 
-def is_context_import_mode (context_node):
-    if not context_node:
-        return False
+def is_hunk_import_mode (source_code, hunk_start_line, hunk_end_line):
+    """
+    """
     
-    # Sometimes a dict of import nodes might be passed into this function.
-    if 'import_or_package_node' in context_node:
-        return True
-    if context_node.type == "import_declaration" or context_node.type == "package_declaration":
-        return True
     return False
 
 # endregion
-
 
 def node_to_dict(node_is_import, node, source_code):
     """
@@ -207,9 +204,6 @@ def node_to_dict(node_is_import, node, source_code):
             
     return node_dict
 
-
-
-
 def find_context_node(code_bytes, target_point_start, target_point_end):
     """
     Finds and returns the context of a section of the source code.
@@ -222,53 +216,45 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
 
     Returns
     -------
-    context_is_import : A boolean that specifies if the context of the hunk is an "import" context,
-                        meaning that it only contains "import" and "package" lines.
-    immediate_context : The immediate context of the hunk. This can be a try block or an if block. 
-    block_context :     The "block" context of the hunk. The type of this context will 
-                        always be one of method declaration, class declaration, or program.
-                        NOTE: If the immediate_context and block_context are equal to each other, 
-                        then block_context will be return empty and immediate_context will represent
-                        both of them (since they are equal).
+
     """
-    context_is_import = False
-    
+    immediate_context = {}
+    method_context = {}
+    class_context = {}
+
+    # Finding the named node for the point range
     JAVA_LANGUAGE = Language(tsjava.language())
     parser = Parser(JAVA_LANGUAGE)
-
     tree = parser.parse(code_bytes)
     node = tree.root_node.named_descendant_for_point_range(target_point_start, target_point_end)
 
-
-    # If the node is an import node, we will only return the imports
-    # sections as immediate context and nothing for block context.
-    if node.type == "import_declaration" or node.type == "package_declaration":
-        query_string = """
-        (import_declaration) @import_or_package_node
-        (package_declaration) @import_or_package_node
-        """
-        query = Query(JAVA_LANGUAGE, query_string)
-        cursor = QueryCursor(query)
-        immediate_context = cursor.captures(tree.root_node)
-        context_is_import = True 
-        block_context = {}
-    else:
-        if node.type == "program":
-            block_context= {}
-            return False, node, {}
-    
-        immediate_context = node.parent
-        if immediate_context.type != "program":
-            block_context = node.parent
-            while(block_context.type != "class_declaration" and block_context.type != "method_declaration" and block_context.type != "program"):
-                block_context= block_context.parent
-            if immediate_context == block_context:
-                block_context = {}
+    if not node:
+        print(f'WARNING: in function find_context_node, could not find named node for point range.')
+    else: 
+        # If the node is an import node, we will only return the imports
+        # sections as immediate context and nothing for block context.
+        print('whatever is here ber')
+        if is_context_import_mode(node):
+            query_string = """
+            (import_declaration) @import_or_package_node
+            (package_declaration) @import_or_package_node
+            """
+            query = Query(JAVA_LANGUAGE, query_string)
+            cursor = QueryCursor(query)
+            immediate_context = cursor.captures(tree.root_node)
         else:
-            block_context = {}
-    return context_is_import, immediate_context, block_context
+            if node.type == "program":
+                immediate_context = node
+            else:
+                # If the node is not the global scope ("program"), then the immediate context is always the parent of the node.
+                immediate_context = node.parent
 
+                if is_context_in_method(immediate_context):
+                    method_context = get_context_parent_method(immediate_context)
+                if is_context_in_class(immediate_context):
+                    class_context = get_context_parent_class(immediate_context)
 
+    return immediate_context, method_context, class_context
 
 #TODO: Change this function's name to better indicate what it actually does and 
 #      remove any confusion about its difference with the 'find_context_node' function.
@@ -295,41 +281,50 @@ def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end
         code_bytes = bytes(java_code, "utf8")
         target_point_start = (hunk_start_line, 0)
         target_point_end = (hunk_end_line, 0)
-        context_is_import, immediate_context, block_context = find_context_node(code_bytes, target_point_start, target_point_end)
+        immediate_context, method_context, class_context = find_context_node(code_bytes, target_point_start, target_point_end)
+
+        context_is_import = is_context_import_mode(immediate_context)
+        print(f'context is import: {context_is_import}')
+
+        immediate_context_AST_dict = {}
+        method_context_AST_dict = {}
+        class_context_AST_dict = {}
+        immediate_context_source_code = ""
+        method_context_source_code = ""
+        class_context_source_code = ""
 
         immediate_context_AST_dict = node_to_dict(context_is_import, immediate_context, code_bytes)
         
         if context_is_import: 
             immediate_context_source_code = java_code.splitlines()[int(immediate_context_AST_dict['first import line']):int(immediate_context_AST_dict['last import line'])+1]
-            block_context_source_code = ""
-            block_context_AST_dict = {}
+            print(f'Hey bro these lines came back: import start: {int(immediate_context_AST_dict["first import line"])} and import end: {int(immediate_context_AST_dict["last import line"])+1}')
         else:
             immediate_context_source_code = java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
             # Sometiems the block context and immediate context are the same, in which case to preserve space we don't 
-            # write the block context (the find_context_node function above returns a null block_context).
-            if block_context:
-                block_context_source_code = java_code.splitlines()[block_context.start_point[0]:block_context.end_point[0]+1]
-                block_context_AST_dict = node_to_dict(context_is_import, block_context, code_bytes)
-            else:
-                block_context_source_code = ""
-                block_context_AST_dict = {}
+            # write the block context (the find_context_node function above returns a null method_context).
+            if method_context:
+                method_context_source_code = java_code.splitlines()[method_context.start_point[0]:method_context.end_point[0]+1]
+                method_context_AST_dict = node_to_dict(context_is_import, method_context, code_bytes)
+            if class_context:
+                class_context_source_code = java_code.splitlines()[class_context.start_point[0]:class_context.end_point[0]+1]
+                class_context_AST_dict = node_to_dict(context_is_import, class_context, code_bytes)
 
         context_AST_output = {
             "Is Context Import" : context_is_import,
             "Immediate Context AST Representaion": immediate_context_AST_dict,
-            "Block Context AST Representation": block_context_AST_dict
+            "Method Context AST Representation": method_context_AST_dict,
+            "Class Context AST Represenetation": class_context_AST_dict
         }
 
         context_source_code_output = {
             "Is Context Import" : context_is_import,
             "Immediate Context Source Code": immediate_context_source_code,
-            "Block Context Source Code": block_context_source_code
+            "Method Context Source Code": method_context_source_code,
+            "Class Context Source Code": class_context_source_code
         }
 
 
         return context_AST_output, context_source_code_output
-
-
 
 def find_adjacent_context(context_node):
     """
@@ -436,7 +431,7 @@ def main():
         code_bytes = bytes(java_code, "utf8")
         target_point_start = (test_hunk_start_line, 0)
         target_point_end = (test_hunk_end_line, 0)
-        context_is_import, immediate_context, block_context = find_context_node(code_bytes, target_point_start, target_point_end)
+        context_is_import, immediate_context, method_context = find_context_node(code_bytes, target_point_start, target_point_end)
 
     
     if not is_context_import_mode(immediate_context): 
@@ -483,8 +478,6 @@ def main():
 
 
         json.dump(test_output_dic, outfile, indent = 2)
-
-    
 
 if __name__ == "__main__":
     main()

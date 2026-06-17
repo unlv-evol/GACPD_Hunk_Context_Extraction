@@ -9,3 +9,7 @@ __pycache__/
 # Config file can be customized. That's why there is a config template file that the user should copy the content of and 
 # create their own Config.py file.
 Config.py
+
+
+#Debug Files
+Making_AST/DEBUG_Extract_Hunk.py
