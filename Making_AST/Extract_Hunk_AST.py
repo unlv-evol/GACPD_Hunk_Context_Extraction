@@ -1,160 +1,9 @@
 import json
 import sys
+import Extract_Hunk_AST_Util
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
-# region GLOBAL VARIABLES
-context_is_import_mode = False
-# endregion
 
-# region UTIL FUNCTIONS
-
-# Getters
-def get_context_parent_class(context_node):
-    """
-    Gets the class that contains the provided context node.
-
-    Parameters
-    ----------
-    context_node : A context that is located in a class.
-
-    Returns
-    -------
-    context_node : The context of the parent class of the provided input context.
-    """
-    if context_node:
-        while context_node.type != "class_declaration" and context_node.type != "program":
-            context_node = context_node.parent
-            if not context_node:
-                return {}
-        
-        if context_node.type == "program":
-            return {}
-        
-    return context_node
-
-def get_context_parent_method (context_node):
-    """
-    Gets the parent method of the provided context.
-
-    Parameters
-    ----------
-    context_node : The context that is located in a method.
-
-    Returns
-    -------
-    context_node : The context of the parent method.
-    """
-    if context_node:
-        while context_node.type != "class_declaration" and context_node.type != "program" and context_node.type != "method_declaration":
-            context_node = context_node.parent
-            if not context_node:
-                return {}
-        
-        if context_node.type == "program" or context_node.type == "class_declaration":
-            return {}
-        
-    return context_node
-
-def get_context_parent_block (context_node):
-    """
-    Gets either the method or the class that contains the provided context_node.
-
-    Parameters
-    ----------
-    context_node : The tree-sitter node to find the context parent block of.
-
-    Returns
-    -------
-    context_node : The parent block of the provided context.
-    """
-    if context_node:
-        while context_node.type != "class_declaration" and context_node.type != "program" and context_node.type != "method_declaration":
-            context_node = context_node.parent
-            if not context_node:
-                return {}
-        
-        if context_node.type == "program" :
-            return {}
-
-    return context_node
-
-def get_method_signature (method_context_node, source_code: bytes) -> str:
-    """
-    Returns a string that contains the signature part of a method
-
-    Parameters
-    ----------
-    method_context_node : The tree-sitter node of the targeted method.
-    source_code : The source code of the file that contains the method, in bytes.
-
-    Returns
-    -------
-    method_signature : A string that contains the signature of the method.
-    """
-    if not method_context_node:
-        print('WARNING: Passed null method context node to get_method_signature')
-        return""
-    if method_context_node.type != "method_declaration":
-        print(f'WARNING: Passed non-method node to get_method_signature. The node is {method_context_node.type}')   
-        return""
-    
-    signature_parts = []
-    for child in method_context_node.children:
-        if child.type == 'block':
-            break
-
-        signature_parts.append(source_code[child.start_byte:child.end_byte].decode('utf-8'))
-
-    method_signature = " ".join(signature_parts).strip()
-    method_signature = method_signature.replace(' (', '(')
-
-    return method_signature
-
-# Predicates
-
-def is_context_in_method (context_node):
-    if not context_node:
-        return False
-    if context_node.type == "program":
-        return False
-    while context_node.parent:
-        if context_node.type == "method_declaration":
-            return True
-        context_node = context_node.parent
-    
-    return False
-
-def is_context_in_class (context_node):
-    if not context_node:
-        return False
-    if context_node.type == "program":
-        return False
-    while context_node.parent:
-        if context_node.type == "class_declaration":
-            return True
-        context_node = context_node.parent
-    
-    return False
-
-def is_context_in_class_or_method (context_node):
-    if not context_node:
-        return False
-    if context_node.type == "program":
-        return False
-    while context_node.parent:
-        if context_node.type == "method_declaration" or context_node.type == "class_declaration":
-            return True
-        context_node = context_node.parent
-    
-    return False
-
-def is_hunk_import_mode (source_code, hunk_start_line, hunk_end_line):
-    """
-    """
-    
-    return False
-
-# endregion
 
 def node_to_dict(node_is_import, node, source_code):
     """
@@ -216,7 +65,10 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
 
     Returns
     -------
-
+    immediate_context : The closest encapsulating context of the hunk. 
+                        This can be an if block, a try block, or any other type of context.
+    method_context :    The context of the encapsulating method.
+    class_context :     The context of the encapsulating class.
     """
     immediate_context = {}
     method_context = {}
@@ -233,8 +85,7 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
     else: 
         # If the node is an import node, we will only return the imports
         # sections as immediate context and nothing for block context.
-        print('whatever is here ber')
-        if is_context_import_mode(node):
+        if Extract_Hunk_AST_Util.context_is_import_mode:
             query_string = """
             (import_declaration) @import_or_package_node
             (package_declaration) @import_or_package_node
@@ -249,10 +100,10 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
                 # If the node is not the global scope ("program"), then the immediate context is always the parent of the node.
                 immediate_context = node.parent
 
-                if is_context_in_method(immediate_context):
-                    method_context = get_context_parent_method(immediate_context)
-                if is_context_in_class(immediate_context):
-                    class_context = get_context_parent_class(immediate_context)
+                if Extract_Hunk_AST_Util.is_context_in_method(immediate_context):
+                    method_context = Extract_Hunk_AST_Util.get_context_parent_method(immediate_context)
+                if Extract_Hunk_AST_Util.is_context_in_class(immediate_context):
+                    class_context = Extract_Hunk_AST_Util.get_context_parent_class(immediate_context)
 
     return immediate_context, method_context, class_context
 
@@ -277,14 +128,13 @@ def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end
     """
     
     with open(java_file_address) as java_file:
+        Extract_Hunk_AST_Util.determine_hunk_import_mode(java_file.readlines(), hunk_start_line, hunk_end_line)
+        java_file.seek(0)
         java_code = java_file.read()
         code_bytes = bytes(java_code, "utf8")
         target_point_start = (hunk_start_line, 0)
         target_point_end = (hunk_end_line, 0)
         immediate_context, method_context, class_context = find_context_node(code_bytes, target_point_start, target_point_end)
-
-        context_is_import = is_context_import_mode(immediate_context)
-        print(f'context is import: {context_is_import}')
 
         immediate_context_AST_dict = {}
         method_context_AST_dict = {}
@@ -293,31 +143,30 @@ def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end
         method_context_source_code = ""
         class_context_source_code = ""
 
-        immediate_context_AST_dict = node_to_dict(context_is_import, immediate_context, code_bytes)
+        immediate_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, immediate_context, code_bytes)
         
-        if context_is_import: 
+        if Extract_Hunk_AST_Util.context_is_import_mode: 
             immediate_context_source_code = java_code.splitlines()[int(immediate_context_AST_dict['first import line']):int(immediate_context_AST_dict['last import line'])+1]
-            print(f'Hey bro these lines came back: import start: {int(immediate_context_AST_dict["first import line"])} and import end: {int(immediate_context_AST_dict["last import line"])+1}')
         else:
             immediate_context_source_code = java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
             # Sometiems the block context and immediate context are the same, in which case to preserve space we don't 
             # write the block context (the find_context_node function above returns a null method_context).
             if method_context:
                 method_context_source_code = java_code.splitlines()[method_context.start_point[0]:method_context.end_point[0]+1]
-                method_context_AST_dict = node_to_dict(context_is_import, method_context, code_bytes)
+                method_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, method_context, code_bytes)
             if class_context:
                 class_context_source_code = java_code.splitlines()[class_context.start_point[0]:class_context.end_point[0]+1]
-                class_context_AST_dict = node_to_dict(context_is_import, class_context, code_bytes)
+                class_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, class_context, code_bytes)
 
         context_AST_output = {
-            "Is Context Import" : context_is_import,
+            "Is Context Import" : Extract_Hunk_AST_Util.context_is_import_mode,
             "Immediate Context AST Representaion": immediate_context_AST_dict,
             "Method Context AST Representation": method_context_AST_dict,
             "Class Context AST Represenetation": class_context_AST_dict
         }
 
         context_source_code_output = {
-            "Is Context Import" : context_is_import,
+            "Is Context Import" : Extract_Hunk_AST_Util.context_is_import_mode,
             "Immediate Context Source Code": immediate_context_source_code,
             "Method Context Source Code": method_context_source_code,
             "Class Context Source Code": class_context_source_code
@@ -420,66 +269,3 @@ def find_adjacent_context(context_node):
 
     
     return previous_method, next_method, previous_class, next_class
-
-def main():
-
-    test_hunk_start_line = 35
-    test_hunk_end_line = 35
-    test_file = "temporary_test/test_file_light.java"
-    with open(test_file) as java_file:
-        java_code = java_file.read()
-        code_bytes = bytes(java_code, "utf8")
-        target_point_start = (test_hunk_start_line, 0)
-        target_point_end = (test_hunk_end_line, 0)
-        context_is_import, immediate_context, method_context = find_context_node(code_bytes, target_point_start, target_point_end)
-
-    
-    if not is_context_import_mode(immediate_context): 
-        if is_context_in_method(immediate_context):
-            print_thing = 'is'
-        else:
-            print_thing = 'is not'
-    else:
-        print_thing = 'is not'
-    print(f'the provided context {print_thing} in a function')
-
-    sys.exit()
-    prev_method, next_method, prev_class, next_class = find_adjacent_context(immediate_context)
-
-    with open('temporary_output_folder/around_context.json', 'w') as outfile:
-        if immediate_context:
-            immediate_context_text =  java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
-        else:
-            immediate_context_text= ""
-        if prev_method:
-            prev_method_text = java_code.splitlines()[prev_method.start_point[0]:prev_method.end_point[0]+1]
-        else:
-            prev_method_text = ""
-        if next_method:
-            next_method_text = java_code.splitlines()[next_method.start_point[0]:next_method.end_point[0]+1]
-        else:
-            next_method_text = ""
-        if prev_class:
-            prev_class_text= java_code.splitlines()[prev_class.start_point[0]:prev_class.end_point[0]+1]
-        else:
-            prev_class_text = ""
-        if next_class:
-            next_class_text = java_code.splitlines()[next_class.start_point[0]:next_class.end_point[0]+1]
-        else:
-            next_class_text = ""
-        test_output_dic = {
-            "immediate context type": immediate_context.type,
-            "prev method": prev_method_text,
-            "next method": next_method_text,
-            "prev class": prev_class_text,
-            "next class": next_class_text
-        }
-
-
-
-        json.dump(test_output_dic, outfile, indent = 2)
-
-if __name__ == "__main__":
-    main()
-
-
