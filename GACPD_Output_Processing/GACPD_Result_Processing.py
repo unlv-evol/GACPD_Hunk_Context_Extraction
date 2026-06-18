@@ -213,7 +213,8 @@ def save_results_to_json(results):
         print(f'Done, {format_name_print} result summary saved to "{output_file_address}"')
 
 def get_GACPD_project_folder_address():
-    GACPD_project_address = os.path.join(Config.GACPD_repos_results_folder, Config.GACPD_project_folder_name)
+    GACPD_repos_results_folder = os.path.join(Config.GACPD_results_folder, Config.REPOS_RESULTS_FOLDER_NAME)
+    GACPD_project_address = os.path.join(GACPD_repos_results_folder, Config.GACPD_project_folder_name)
     if not os.path.exists(GACPD_project_address):
         print(f'ERROR: The provided project folder does not exist.  "{GACPD_project_address}"')    
         sys.exit()

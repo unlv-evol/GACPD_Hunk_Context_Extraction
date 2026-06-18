@@ -3,7 +3,6 @@
 # *******************************************
 output_folder = ""
 GACPD_project_folder_name = ""
-GACPD_repos_results_folder = ""
 GACPD_results_folder = ""
 
 
@@ -21,6 +20,7 @@ should_json_be_hierarchical = True
 # *******************************************
 # ******************Constants*****************
 # *******************************************
+REPOS_RESULTS_FOLDER_NAME = "Repos_results"
 RESULT_FILE_NAME = "results.txt"
 RESULT_OUTPUT_FILE_SUFFIX_NAME = "GACPD_Results_Processed.json"
 SOURCE_FOLDER_NAME = "src/"

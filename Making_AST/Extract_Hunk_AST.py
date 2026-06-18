@@ -1,9 +1,13 @@
 import json
 import sys
-import Extract_Hunk_AST_Util
+import os
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+import Extract_Hunk_AST_Util
 
 def node_to_dict(node_is_import, node, source_code):
     """
