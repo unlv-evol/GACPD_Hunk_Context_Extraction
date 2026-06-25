@@ -61,6 +61,18 @@ def get_refactorings_between_commits(RM_path, repo_path, output_json , divergenc
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
         )
     
+def get_refactorings_in_PR(RM_path, repo_path, output_json, timeout, PR_number = None):
+    command = [
+        RM_path,
+        "-gp",
+        PR_number,
+        timeout,
+        "-json",
+        output_json
+    ]
     
-
+    result = subprocess.run(
+        command, stdout= subprocess.PIPE, stderr = subprocess.PIPE, text = True, check = True
+    )
+    
 
