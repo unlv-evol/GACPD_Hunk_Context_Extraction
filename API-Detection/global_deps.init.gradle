@@ -1,0 +1,16 @@
+//USAGE:
+// ./gradlew ProjectDependencyAnalysis -I "C:\Users\pahla\Documents\Personals\Parham\Work\Code\Ouput Extraction\API-Detection\global_deps.init.gradle"
+projectsEvaluated { gradle ->
+    gradle.rootProject.allprojects { proj ->
+        proj.tasks.register('ProjectDependencyAnalysis', org.gradle.api.tasks.diagnostics.DependencyReportTask) {
+            group = 'help'
+            description = 'Recursively prints dependencies of a project.'
+            if (project.hasProperty('outputFile')) {
+                outputFile = proj.file(project.property('outputFile'))
+            }   
+            else {
+                outputFile = proj.file("${proj.layout.buildDirectory.get().asFile}/reports/dependencies.txt")
+            }
+        }
+    }
+}
