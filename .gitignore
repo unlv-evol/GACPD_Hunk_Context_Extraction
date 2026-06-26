@@ -15,3 +15,6 @@ Config.py
 Making_AST/DEBUG_Extract_Hunk.py
 API-Detection/DEBUG_Detect_API.py
 Refactoring_Detection/DEBUG_Refactoring_Detection.py
+
+#Github tokens
+*github-oauth.properties
