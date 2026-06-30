@@ -25,10 +25,10 @@ def get_context_parent_class(context_node):
         while context_node.type != "class_declaration" and context_node.type != "program":
             context_node = context_node.parent
             if not context_node:
-                return {}
+                return None
         
         if context_node.type == "program":
-            return {}
+            return None
         
     return context_node
 
@@ -78,14 +78,14 @@ def get_context_parent_block (context_node):
 
     return context_node
 
-def get_method_signature (method_context_node, source_code: bytes) -> str:
+def get_method_signature (method_context_node, source_code) -> str:
     """
     Returns a string that contains the signature of the inputted method context node.
 
     Parameters
     ----------
     method_context_node : The tree-sitter node of the target method.
-    source_code : The source code of the file that contains the method, in bytes.
+    source_code : The source code of the file that contains the method in text
 
     Returns
     -------
@@ -102,8 +102,8 @@ def get_method_signature (method_context_node, source_code: bytes) -> str:
     for child in method_context_node.children:
         if child.type == 'block':
             break
-
-        signature_parts.append(source_code[child.start_byte:child.end_byte].decode('utf-8'))
+        # source_code = source_code.encode('utf-8')
+        signature_parts.append(source_code[child.start_byte:child.end_byte])
 
     method_signature = " ".join(signature_parts).strip()
     method_signature = method_signature.replace(' (', '(')
@@ -215,5 +215,30 @@ def determine_hunk_import_mode (source_code_lines, hunk_start_line, hunk_end_lin
             context_is_import_mode = True
     
     return
-
 # endregion
+
+def get_node_exact_string(node, source_code_text):
+    source_code_lines = source_code_text.splitlines()
+    start_row, start_col = node.start_point
+    end_row, end_col = node.end_point
+
+    node_lines = source_code_lines[start_row:end_row + 1]
+
+    if start_row == end_row:
+        exact_string = node_lines[0][start_col:end_col + 1]
+    else:
+        node_lines[0] = node_lines[0][start_col:]
+        node_lines[-1] = node_lines[-1][:end_col + 1]
+        exact_string = "\n".join(node_lines)
+
+    return exact_string
+
+
+def sort_nodes_by_start_point(nodes):
+    sorted_nodes = sorted(
+        nodes,
+        key = lambda node: node.start_point
+    )
+    return sorted_nodes
+
+
