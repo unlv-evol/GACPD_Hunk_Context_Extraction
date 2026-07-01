@@ -77,9 +77,10 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
 def extract_package_information():
     pass
 
-#TODO:
+#TODO: finish comments
 def extract_imported_libraries():
-    pass
+    imported_libraries = Extract_Hunk_AST_Util.get_current_AST_import_declarations()
+    return imported_libraries
 
 
 def get_called_methods(target_node):
@@ -152,7 +153,15 @@ def extract_called_methods(target_node, source_code):
 
 
 #TODO:
-def extract_referenced_classes():
+def extract_referenced_classes(target_node, source_code):
+    method_node = Extract_Hunk_AST_Util.get_context_parent_method(target_node)
+    if not method_node:
+        return None
+    
+    file_imported_classes = Extract_Hunk_AST_Util.get_current_AST_import_declarations_classes()
+    Query_string = """
+
+    """
     pass
 
 def extract_neighboring_methods_within_same_class(target_node):

@@ -1,9 +1,16 @@
 import json
+import os
 import sys
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+import Extract_Hunk_AST
 # region GLOBAL VARIABLES
 context_is_import_mode = False
+
 # endregion
 
 # region UTIL FUNCTIONS
@@ -48,10 +55,10 @@ def get_context_parent_method (context_node):
         while context_node.type != "class_declaration" and context_node.type != "program" and context_node.type != "method_declaration":
             context_node = context_node.parent
             if not context_node:
-                return {}
+                return None
         
         if context_node.type == "program" or context_node.type == "class_declaration":
-            return {}
+            return None
         
     return context_node
 
@@ -217,6 +224,10 @@ def determine_hunk_import_mode (source_code_lines, hunk_start_line, hunk_end_lin
     return
 # endregion
 
+def get_file_content(file_address):
+    with open(file_address, 'r') as f:
+        return f.read()
+    
 def get_node_exact_string(node, source_code_text):
     source_code_lines = source_code_text.splitlines()
     start_row, start_col = node.start_point
@@ -233,6 +244,12 @@ def get_node_exact_string(node, source_code_text):
 
     return exact_string
 
+def get_node_list_exact_string(node_list, source_file_text):
+    output = []
+    for node in node_list:
+        output.append(f'{get_node_exact_string(node, source_file_text)}') 
+    
+    return output
 
 def sort_nodes_by_start_point(nodes):
     sorted_nodes = sorted(
@@ -240,5 +257,35 @@ def sort_nodes_by_start_point(nodes):
         key = lambda node: node.start_point
     )
     return sorted_nodes
+
+# region IMPORT DECLARATIONS
+def get_current_AST_import_declarations():
+        if Extract_Hunk_AST.current_generated_AST:
+            query_string = """
+            (import_declaration) @import
+            """
+            JAVA_LANGUAGE = Language(tsjava.language())
+            query = Query(JAVA_LANGUAGE, query_string)
+            cursor = QueryCursor(query)
+            captures = cursor.captures(Extract_Hunk_AST.current_generated_AST.root_node)
+            return captures['import']
+        else:
+            return None
+        
+def get_current_AST_import_declarations_classes(file_content):
+    imports = get_current_AST_import_declarations()
+    imports = sort_nodes_by_start_point(imports)
+    import_classes = []
+    for individual_import in imports:
+        for child in individual_import.children:
+            if child.type == "scoped_identifier":
+                import_text = get_node_exact_string(child, file_content)
+                if '.' in import_text:
+                    class_text = import_text.split('.')[-1]
+                    if ';' in class_text:
+                        class_text = class_text.split(';')[0]
+                    import_classes.append(class_text)
+    return import_classes
+# endregion
 
 

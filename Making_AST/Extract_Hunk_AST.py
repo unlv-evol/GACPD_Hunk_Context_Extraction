@@ -9,6 +9,8 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 import Extract_Hunk_AST_Util
 
+current_generated_AST = None
+
 def node_to_dict(node_is_import, node, source_code):
     """
     Converts a tree-sitter node to a dictionary ready for json saving and debug printing.
@@ -74,6 +76,7 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
     method_context :    The context of the encapsulating method.
     class_context :     The context of the encapsulating class.
     """
+    global current_generated_AST
     immediate_context = {}
     method_context = {}
     class_context = {}
@@ -81,8 +84,8 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
     # Finding the named node for the point range
     JAVA_LANGUAGE = Language(tsjava.language())
     parser = Parser(JAVA_LANGUAGE)
-    tree = parser.parse(code_bytes)
-    node = tree.root_node.named_descendant_for_point_range(target_point_start, target_point_end)
+    current_generated_AST = parser.parse(code_bytes)
+    node = current_generated_AST.root_node.named_descendant_for_point_range(target_point_start, target_point_end)
 
     if not node:
         print(f'WARNING: in function find_context_node, could not find named node for point range.')
@@ -96,7 +99,7 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
             """
             query = Query(JAVA_LANGUAGE, query_string)
             cursor = QueryCursor(query)
-            immediate_context = cursor.captures(tree.root_node)
+            immediate_context = cursor.captures(current_generated_AST.root_node)
         else:
             if node.type == "program":
                 immediate_context = node
