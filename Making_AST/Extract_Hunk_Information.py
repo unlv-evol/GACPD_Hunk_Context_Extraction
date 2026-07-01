@@ -8,11 +8,18 @@ import Extract_Hunk_AST_Util
 JAVA_LANGUAGE = Language(tree_sitter_java.language())
 parser = Parser(JAVA_LANGUAGE)
 
-#TODO: Complete the function comments
 def extract_class_information(target_node, source_code, should_include_nested_classes: bool):
     """
     Extracts the relevanet information of the target node's class.
 
+    Parameters
+    ----------
+    target_node : A tree-sitter node that is either a child of a 
+                  class declaration node or is a class declaration node.
+    source_code : The source code of the file that includes the class.
+    should_include_nested_classes : Should the class information output 
+                                    include the nested classes (recursive)
+                                    of the target class?
     """
     class_node = Extract_Hunk_AST_Util.get_context_parent_class(target_node)
     if not class_node:
@@ -77,11 +84,13 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
 def extract_package_information():
     pass
 
-#TODO: finish comments
 def extract_imported_libraries():
+    """
+    Gets the imported libraries from the current working AST (saved in
+    Extract_Hunk_AST.py).
+    """
     imported_libraries = Extract_Hunk_AST_Util.get_current_AST_import_declarations()
     return imported_libraries
-
 
 def get_called_methods(target_node):
     """
@@ -148,21 +157,45 @@ def extract_called_methods(target_node, source_code):
     
     return method_invocations_info
 
-    
-
-
-
-#TODO:
 def extract_referenced_classes(target_node, source_code):
+    """
+    Retrieves the referenced classes inside the target node's encapsulating method.
+
+    Parameters
+    ----------
+    target_node :            A tree-sitter node that should be a descendent of a method 
+                             or the method declaration node itself.
+    source_code :            The text of the source code that contains the method.
+
+    Returns
+    -------
+    referenced_class_names : A list of referenced classes inside the taget node's encapsulating
+                             method. This list is duplicate-free.
+
+    """
     method_node = Extract_Hunk_AST_Util.get_context_parent_method(target_node)
     if not method_node:
         return None
     
-    file_imported_classes = Extract_Hunk_AST_Util.get_current_AST_import_declarations_classes()
-    Query_string = """
+    referenced_class_names = []
+    file_imported_classes = Extract_Hunk_AST_Util.get_current_AST_import_declarations_classes(source_code)
 
+    query_string = """
+    (scoped_identifier) @potential_class_reference
+    (type_identifier) @potential_class_reference
+    (identifier) @potential_class_reference
     """
-    pass
+    query = Query(JAVA_LANGUAGE, query_string)
+    cursor = QueryCursor(query)
+    captures = cursor.captures(method_node)
+    if captures:
+        potential_class_references = Extract_Hunk_AST_Util.get_node_list_exact_string(captures['potential_class_reference'], source_code)
+        potential_class_references = [Extract_Hunk_AST_Util.get_clean_name(x) for x in potential_class_references]
+        for potential_class_reference in potential_class_references:
+            if potential_class_reference in file_imported_classes and not potential_class_reference in referenced_class_names:
+                referenced_class_names.append(potential_class_reference)
+
+    return referenced_class_names
 
 def extract_neighboring_methods_within_same_class(target_node):
     """

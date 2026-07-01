@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import re
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
 
@@ -246,10 +247,16 @@ def get_node_exact_string(node, source_code_text):
 
 def get_node_list_exact_string(node_list, source_file_text):
     output = []
-    for node in node_list:
-        output.append(f'{get_node_exact_string(node, source_file_text)}') 
+    if node_list:
+        for node in node_list:
+            output.append(f'{get_node_exact_string(node, source_file_text)}') 
     
     return output
+
+def get_clean_name(messy_name: str):
+    cleaned_name = re.sub(r'[^a-zA-Z0-9]', '', messy_name)
+    return cleaned_name
+
 
 def sort_nodes_by_start_point(nodes):
     sorted_nodes = sorted(
