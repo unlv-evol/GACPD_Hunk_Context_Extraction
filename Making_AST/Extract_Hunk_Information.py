@@ -105,23 +105,13 @@ def get_called_methods(target_node):
     -------
     sorted_invocations :    A list of invocations sorted by their starting points.
     """
-    node = target_node
-    if not node:
-        print('Error, received NONE node in extract_neighboring_methods_within_same_class function.')
-        return None
-
-
-    if not node.type == "method_declaration":
-        while not node.type == "method_declaration" and not node.type == "class_declaration" and not node.type == "program":
-            node = node.parent
-    
-    # The passed in target node is not inside a method:
-    if node.type != "method_declaration":
+    method_node = Extract_Hunk_AST_Util.get_context_parent_method(target_node)
+    if not method_node:
         return None
     
     query = Query(JAVA_LANGUAGE, "(method_invocation) @invocation")
     cursor = QueryCursor(query)
-    captures = cursor.captures(node)
+    captures = cursor.captures(method_node)
     sorted_invocations = Extract_Hunk_AST_Util.sort_nodes_by_start_point(captures['invocation'])
 
     return sorted_invocations
