@@ -236,6 +236,13 @@ def extract_neighboring_methods_within_same_class(target_node):
     return previous_method, next_method
 
 def get_if_statement_next_if(if_statement_node):
+    """
+    Returns the subsequent "if-type" (else if, or else).
+
+    Parameters
+    ----------
+    if_statement_node : Can be "if_statment", "else_if_statement", or "else_statement" type.
+    """
     if if_statement_node:
         if_set = {Extract_Hunk_AST_Util.Construct_Flow_Type.IF_STATEMENT,
                   Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_IF_STATEMENT,
