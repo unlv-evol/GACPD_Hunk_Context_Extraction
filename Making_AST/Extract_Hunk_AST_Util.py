@@ -4,11 +4,22 @@ import sys
 import re
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
+from enum import Enum
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 import Extract_Hunk_AST
+
+class Construct_Flow_Type(Enum):
+    NONE = 0
+    IF_STATEMENT = 1
+    FOR_STATEMENT = 2
+    WHILE_STATEMENT = 3
+    DO_STATEMENT = 4
+    ENHANCED_FOR_STATEMENT = 5
+    ELSE_IF_STATEMENT = 6
+    ELSE_STATEMENT = 7
 # region GLOBAL VARIABLES
 context_is_import_mode = False
 
@@ -118,6 +129,46 @@ def get_method_signature (method_context_node, source_code) -> str:
 
     return method_signature
 
+def get_node_block_child(node):
+    if node:
+        if node.type == "block":
+            return node
+        
+        for child_node in node.children:
+            if child_node.type == "block":
+                return child_node
+    
+    return None
+
+def get_node_construct_flow_type(node):
+    if not node:
+        return Construct_Flow_Type.NONE
+    if node.type == "for_statement": 
+        return Construct_Flow_Type.FOR_STATEMENT
+    if node.type == "while_statement":
+        return Construct_Flow_Type.WHILE_STATEMENT
+    if node.type == "do_statement":
+        return Construct_Flow_Type.DO_STATEMENT
+    if node.type == "enhanced_for_statement":
+        return Construct_Flow_Type.ENHANCED_FOR_STATEMENT
+    
+    # if, else if, else  
+    if node.type == "if_statement":
+        if node.prev_sibling:
+            if node.prev_sibling.type == "else":
+                return Construct_Flow_Type.ELSE_IF_STATEMENT
+        return Construct_Flow_Type.IF_STATEMENT
+    if node.type == "block":
+        if node.prev_sibling:
+            if node.prev_sibling.type == "else":
+                return Construct_Flow_Type.ELSE_STATEMENT
+            
+    if node.type in {"switch_expression", "switch_block_statement_group", "ternary_expression"}:
+        return Construct_Flow_Type.NONE
+    #if node.type in {}
+
+
+    return False
 # Predicates
 
 def is_context_in_method (context_node):
@@ -223,6 +274,8 @@ def determine_hunk_import_mode (source_code_lines, hunk_start_line, hunk_end_lin
             context_is_import_mode = True
     
     return
+
+
 # endregion
 
 def get_file_content(file_address):

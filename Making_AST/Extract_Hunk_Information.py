@@ -4,7 +4,7 @@ import json
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java
 import Extract_Hunk_AST_Util
-
+import Extract_Hunk_AST
 JAVA_LANGUAGE = Language(tree_sitter_java.language())
 parser = Parser(JAVA_LANGUAGE)
 
@@ -235,10 +235,81 @@ def extract_neighboring_methods_within_same_class(target_node):
 
     return previous_method, next_method
 
+def get_if_statement_next_if(if_statement_node):
+    if if_statement_node:
+        if_set = {Extract_Hunk_AST_Util.Construct_Flow_Type.IF_STATEMENT,
+                  Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_IF_STATEMENT,
+                  Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_STATEMENT
+                  }
+        for child in if_statement_node.children:
+            child_construct_flow_type = Extract_Hunk_AST_Util.get_node_construct_flow_type(child)
+            if child_construct_flow_type in if_set:
+                return child
+
+    return None
 
 #TODO:
-def extract_control_flow_constructs():
-    pass
+def extract_control_flow_constructs(target_node, source_code, override_type: str = ""):
+    # test_temp = Extract_Hunk_AST_Util.get_node_construct_flow_type(target_node)
+    # match test_temp:
+    #     case Extract_Hunk_AST_Util.Construct_Flow_Type.IF_STATEMENT:
+    #         print("\n************IF STATEMENT*********")
+    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
+    #         print("***********************************\n")
+    #     case Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_IF_STATEMENT:
+    #         print("\n*******ELSE IF STATEMENT*********")
+    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
+    #         print("***********************************\n")
+    #     case Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_STATEMENT:
+    #         print("\n*******ELSE STATEMENT************")
+    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
+    #         print("***********************************\n")
+
+    node_block = Extract_Hunk_AST_Util.get_node_block_child(target_node)
+    if not node_block:
+        print('yeah it happened')
+        with open('temporary_output_folder/error_result.json', 'w', encoding = 'utf-8') as outfile:
+            # output = Extract_Hunk_AST.node_to_dict(False, target_node, source_code.encode("utf-8"), False)
+            output = Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)
+            json.dump(output, outfile, indent = 2)
+        return None
+    if override_type == "":
+        target_node_type = target_node.type
+    else:
+        target_node_type = override_type
+
+    construct_flow_dict = {
+        "Type" : target_node_type,
+        "Children" : []
+    }
+    for child in node_block.children:
+        child_construct_flow_type = Extract_Hunk_AST_Util.get_node_construct_flow_type(child)
+        match child_construct_flow_type:
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.NONE:
+                continue
+            # IF, ELSE IF, ELSE:
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.IF_STATEMENT:
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
+                next_if = get_if_statement_next_if(child)
+                while(next_if):
+                    next_if_construct_flow_type = Extract_Hunk_AST_Util.get_node_construct_flow_type(next_if)
+                    match next_if_construct_flow_type:
+                        case Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_IF_STATEMENT:
+                            
+                            construct_flow_dict["Children"].append(extract_control_flow_constructs(next_if, source_code,"else_if_statement"))
+                        case Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_STATEMENT:
+
+                            construct_flow_dict["Children"].append(extract_control_flow_constructs(next_if, source_code,"else_statement"))
+                        case _:
+                            continue
+                    next_if = get_if_statement_next_if(next_if)
+            
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.FOR_STATEMENT:
+                #print("encouneterd")
+                continue
+            case _:
+                continue
+    return construct_flow_dict
 
 #TODO:
 def generate_structured_context_metadata():

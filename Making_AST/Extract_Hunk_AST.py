@@ -11,7 +11,7 @@ import Extract_Hunk_AST_Util
 
 current_generated_AST = None
 
-def node_to_dict(node_is_import, node, source_code):
+def node_to_dict(node_is_import, node, source_code, short_mode: bool = False):
     """
     Converts a tree-sitter node to a dictionary ready for json saving and debug printing.
 
@@ -42,20 +42,26 @@ def node_to_dict(node_is_import, node, source_code):
             "last import line": last_import_line
         }       
     else:
-        node_text = source_code[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
-        node_dict = {
-            "type": node.type,
-            "is_named": node.is_named,
-            # "start_byte": node.start_byte,
-            # "end_byte": node.end_byte,
-            "start_point": [node.start_point[0], node.start_point[1]],  # [row, column]
-            "end_point": [node.end_point[0], node.end_point[1]],
-            "text": node_text,
-            "children": []
-        }
+        if short_mode:
+            node_dict = {
+                "type": node.type,
+                "children": []
+            }
+        else:
+            node_text = source_code[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+            node_dict = {
+                "type": node.type,
+                "is_named": node.is_named,
+                # "start_byte": node.start_byte,
+                # "end_byte": node.end_byte,
+                "start_point": [node.start_point[0], node.start_point[1]],  # [row, column]
+                "end_point": [node.end_point[0], node.end_point[1]],
+                "text": node_text,
+                "children": []
+            }
 
         for child in node.children:
-            node_dict["children"].append(node_to_dict(False, child, source_code))
+            node_dict["children"].append(node_to_dict(False, child, source_code, short_mode))
             
     return node_dict
 
