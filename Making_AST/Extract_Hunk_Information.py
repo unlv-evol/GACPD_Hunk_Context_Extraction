@@ -264,6 +264,10 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
     #         print("\n*******ELSE STATEMENT************")
     #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
     #         print("***********************************\n")
+    #     case _:
+    #         print("\n*************default*************")
+    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
+    #         print("***********************************\n")
 
     node_block = Extract_Hunk_AST_Util.get_node_block_child(target_node)
     if not node_block:
@@ -303,10 +307,13 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
                         case _:
                             continue
                     next_if = get_if_statement_next_if(next_if)
-            
+            # FOR LOOP    
             case Extract_Hunk_AST_Util.Construct_Flow_Type.FOR_STATEMENT:
-                #print("encouneterd")
-                continue
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.WHILE_STATEMENT:
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.DO_STATEMENT:
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
             case _:
                 continue
     return construct_flow_dict
