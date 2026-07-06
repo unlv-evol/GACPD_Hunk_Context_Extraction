@@ -256,7 +256,7 @@ def get_if_statement_next_if(if_statement_node):
     return None
 
 #TODO:
-def extract_control_flow_constructs(target_node, source_code, override_type: str = ""):
+def extract_control_flow_constructs(target_node, source_code, override_type: str = "", should_be_on_child_block: bool = True):
     # test_temp = Extract_Hunk_AST_Util.get_node_construct_flow_type(target_node)
     # match test_temp:
     #     case Extract_Hunk_AST_Util.Construct_Flow_Type.IF_STATEMENT:
@@ -275,15 +275,19 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
     #         print("\n*************default*************")
     #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
     #         print("***********************************\n")
-
-    node_block = Extract_Hunk_AST_Util.get_node_block_child(target_node)
-    if not node_block:
-        print('yeah it happened')
-        with open('temporary_output_folder/error_result.json', 'w', encoding = 'utf-8') as outfile:
-            # output = Extract_Hunk_AST.node_to_dict(False, target_node, source_code.encode("utf-8"), False)
-            output = Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)
-            json.dump(output, outfile, indent = 2)
+    if not target_node:
+        print('1')
         return None
+    
+    if should_be_on_child_block:
+        node_block = Extract_Hunk_AST_Util.get_node_block_child(target_node)
+        if not node_block:
+            print(f'{target_node.type}, should be on child block: {should_be_on_child_block}')
+            return None
+    else:
+        # Some constructs don't have a block child. They usually contain the block in themeselves (like the switch cases)
+        node_block = target_node
+
     if override_type == "":
         target_node_type = target_node.type
     else:
@@ -321,6 +325,13 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
                 construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
             case Extract_Hunk_AST_Util.Construct_Flow_Type.DO_STATEMENT:
                 construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.SWITCH_EXPRESSION:
+                # Have to find the body of the switch
+                for switch_child in child.children:
+                    if switch_child.type == "switch_block":
+                        construct_flow_dict["Children"].append(extract_control_flow_constructs(switch_child, source_code,"switch", should_be_on_child_block= False))
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.SWITCH_CASE:
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code,"switch_case", should_be_on_child_block= False))
             case _:
                 continue
     return construct_flow_dict

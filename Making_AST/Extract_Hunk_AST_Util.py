@@ -20,6 +20,8 @@ class Construct_Flow_Type(Enum):
     ENHANCED_FOR_STATEMENT = 5
     ELSE_IF_STATEMENT = 6
     ELSE_STATEMENT = 7
+    SWITCH_EXPRESSION = 8
+    SWITCH_CASE = 9
 # region GLOBAL VARIABLES
 context_is_import_mode = False
 
@@ -150,6 +152,8 @@ def get_node_construct_flow_type(node):
     """
     if not node:
         return Construct_Flow_Type.NONE
+    
+    # Iteration Statements(while, do-while, for, enhanced for)
     if node.type == "for_statement": 
         return Construct_Flow_Type.FOR_STATEMENT
     if node.type == "while_statement":
@@ -159,7 +163,7 @@ def get_node_construct_flow_type(node):
     if node.type == "enhanced_for_statement":
         return Construct_Flow_Type.ENHANCED_FOR_STATEMENT
     
-    # if, else if, else  
+    # Selection Statements (if, else if, else, switch, switch case)
     if node.type == "if_statement":
         if node.prev_sibling:
             if node.prev_sibling.type == "else":
@@ -169,13 +173,16 @@ def get_node_construct_flow_type(node):
         if node.prev_sibling:
             if node.prev_sibling.type == "else":
                 return Construct_Flow_Type.ELSE_STATEMENT
-            
-    if node.type in {"switch_expression", "switch_block_statement_group", "ternary_expression"}:
+    if node.type == "switch_expression":
+        return Construct_Flow_Type.SWITCH_EXPRESSION
+    if node.type == "switch_block_statement_group":
+        return Construct_Flow_Type.SWITCH_CASE
+    
+    if node.type in { "ternary_expression"}:
         return Construct_Flow_Type.NONE
-    #if node.type in {}
 
 
-    return False
+    return Construct_Flow_Type.NONE
 # Predicates
 
 def is_context_in_method (context_node):
