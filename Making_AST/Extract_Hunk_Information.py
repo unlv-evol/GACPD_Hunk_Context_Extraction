@@ -332,6 +332,18 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
                         construct_flow_dict["Children"].append(extract_control_flow_constructs(switch_child, source_code,"switch", should_be_on_child_block= False))
             case Extract_Hunk_AST_Util.Construct_Flow_Type.SWITCH_CASE:
                 construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code,"switch_case", should_be_on_child_block= False))
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.BREAK_STATEMENT:
+                break_dict = {
+                    "Type" : child.type,
+                    "Children" : []
+                }
+                construct_flow_dict["Children"].append(break_dict)
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.RETURN_STATEMENT:
+                return_dict = {
+                    "Type" : child.type,
+                    "Children" : []
+                }
+                construct_flow_dict["Children"].append(return_dict)
             case _:
                 continue
     return construct_flow_dict
