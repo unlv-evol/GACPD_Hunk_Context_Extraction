@@ -83,12 +83,13 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
 def extract_package_information():
     return []
 
-def extract_imported_libraries():
+def extract_imported_libraries(source_code):
     """
     Gets the imported libraries from the current working AST (saved in
     Extract_Hunk_AST.py).
     """
     imported_libraries = Extract_Hunk_AST_Util.get_current_AST_import_declarations()
+    imported_libraries = Extract_Hunk_AST_Util.get_node_list_exact_string(imported_libraries, source_code)
     return imported_libraries
 
 def get_called_methods(target_node):
@@ -228,6 +229,8 @@ def extract_neighboring_methods_within_same_class(target_node, source_code):
             "Start Line": previous_method.start_point[0],
             "End Line": previous_method.end_point[0]
         }
+    else:
+        previous_method_info = {}
 
     # NEXT METHOD
     next_sibling = node.next_named_sibling
@@ -237,13 +240,19 @@ def extract_neighboring_methods_within_same_class(target_node, source_code):
             if not next_sibling:
                 break
     next_method = next_sibling    
-    next_method_info = {
-            "Signature" : Extract_Hunk_AST_Util.get_method_signature(next_method, source_code),
-            "Start Line": next_method.start_point[0],
-            "End Line": next_method.end_point[0]
-        }
-
-    return previous_method_info, next_method_info
+    if next_method:
+        next_method_info = {
+                "Signature" : Extract_Hunk_AST_Util.get_method_signature(next_method, source_code),
+                "Start Line": next_method.start_point[0],
+                "End Line": next_method.end_point[0]
+            }
+    else:
+        next_method_info = {}
+    neighboring_methods_info = {
+        "Previous Method" : previous_method_info,
+        "Next Method" : next_method_info
+    }
+    return neighboring_methods_info
 
 def get_if_statement_next_if(if_statement_node):
     """
@@ -389,11 +398,11 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
 def generate_structured_context_metadata(target_node, source_code):
     method_node = Extract_Hunk_AST_Util.get_context_parent_method(target_node)
     if not method_node:
-        return None
+        return {}
     node_structured_context_metadaa = {
         "Encapsulating Class Information": extract_class_information(method_node, source_code, True),
         "Package Information": extract_package_information(),
-        "Globally Imported Libraries": extract_imported_libraries(),
+        "Globally Imported Libraries": extract_imported_libraries(source_code),
         "Invoked Methods" : extract_called_methods(method_node, source_code),
         "Referenced Classes" : extract_referenced_classes(method_node, source_code),
         "Neighboring Methods" : extract_neighboring_methods_within_same_class(method_node, source_code),
