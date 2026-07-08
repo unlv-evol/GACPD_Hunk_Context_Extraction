@@ -356,6 +356,8 @@ def sort_nodes_by_start_point(nodes):
     Sort the provided list of tree-sitter nodes by their starting points,
     first by line, then by row.
     """
+    if not nodes:
+        return nodes
     sorted_nodes = sorted(
         nodes,
         key = lambda node: node.start_point
@@ -376,9 +378,12 @@ def get_current_AST_import_declarations():
             query = Query(JAVA_LANGUAGE, query_string)
             cursor = QueryCursor(query)
             captures = cursor.captures(Extract_Hunk_AST.current_generated_AST.root_node)
+            if not captures:
+                return []
+
             return captures['import']
         else:
-            return None
+            return []
         
 def get_current_AST_import_declarations_classes(file_content):
     """
@@ -386,6 +391,8 @@ def get_current_AST_import_declarations_classes(file_content):
     Requires the text for the source code to be passed in via the parameter.
     """
     imports = get_current_AST_import_declarations()
+    if not imports:
+        return []
     imports = sort_nodes_by_start_point(imports)
     import_classes = []
     for individual_import in imports:

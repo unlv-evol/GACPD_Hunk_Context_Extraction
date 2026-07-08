@@ -26,7 +26,6 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
         return None
     
     class_name = class_node.child_by_field_name("name").text.decode("utf-8")
-    print(f'brother, class name: {class_name}')
 
     class_structure = {
         "class_name": class_name,
@@ -82,7 +81,7 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
 
 #TODO:
 def extract_package_information():
-    pass
+    return []
 
 def extract_imported_libraries():
     """
@@ -165,7 +164,7 @@ def extract_referenced_classes(target_node, source_code):
     """
     method_node = Extract_Hunk_AST_Util.get_context_parent_method(target_node)
     if not method_node:
-        return None
+        return []
     
     referenced_class_names = []
     file_imported_classes = Extract_Hunk_AST_Util.get_current_AST_import_declarations_classes(source_code)
@@ -187,7 +186,7 @@ def extract_referenced_classes(target_node, source_code):
 
     return referenced_class_names
 
-def extract_neighboring_methods_within_same_class(target_node):
+def extract_neighboring_methods_within_same_class(target_node, source_code):
     """
         Returns the previous and next method relative to the provided context node (if they exist).
 
@@ -223,6 +222,12 @@ def extract_neighboring_methods_within_same_class(target_node):
             if not previous_sibling:
                 break
     previous_method = previous_sibling
+    if previous_method:
+        previous_method_info = {
+            "Signature" : Extract_Hunk_AST_Util.get_method_signature(previous_method, source_code),
+            "Start Line": previous_method.start_point[0],
+            "End Line": previous_method.end_point[0]
+        }
 
     # NEXT METHOD
     next_sibling = node.next_named_sibling
@@ -232,8 +237,13 @@ def extract_neighboring_methods_within_same_class(target_node):
             if not next_sibling:
                 break
     next_method = next_sibling    
+    next_method_info = {
+            "Signature" : Extract_Hunk_AST_Util.get_method_signature(next_method, source_code),
+            "Start Line": next_method.start_point[0],
+            "End Line": next_method.end_point[0]
+        }
 
-    return previous_method, next_method
+    return previous_method_info, next_method_info
 
 def get_if_statement_next_if(if_statement_node):
     """
@@ -376,5 +386,17 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
     return construct_flow_dict
 
 #TODO:
-def generate_structured_context_metadata():
-    pass
+def generate_structured_context_metadata(target_node, source_code):
+    method_node = Extract_Hunk_AST_Util.get_context_parent_method(target_node)
+    if not method_node:
+        return None
+    node_structured_context_metadaa = {
+        "Encapsulating Class Information": extract_class_information(method_node, source_code, True),
+        "Package Information": extract_package_information(),
+        "Globally Imported Libraries": extract_imported_libraries(),
+        "Invoked Methods" : extract_called_methods(method_node, source_code),
+        "Referenced Classes" : extract_referenced_classes(method_node, source_code),
+        "Neighboring Methods" : extract_neighboring_methods_within_same_class(method_node, source_code),
+        "Control-Flow Constructs": extract_control_flow_constructs(method_node, source_code)
+    }
+    return node_structured_context_metadaa
