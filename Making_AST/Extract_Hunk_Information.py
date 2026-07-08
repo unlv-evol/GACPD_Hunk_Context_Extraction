@@ -325,6 +325,8 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
                 construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
             case Extract_Hunk_AST_Util.Construct_Flow_Type.DO_STATEMENT:
                 construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.ENHANCED_FOR_STATEMENT:
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code))
             case Extract_Hunk_AST_Util.Construct_Flow_Type.SWITCH_EXPRESSION:
                 # Have to find the body of the switch
                 for switch_child in child.children:
@@ -332,18 +334,43 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
                         construct_flow_dict["Children"].append(extract_control_flow_constructs(switch_child, source_code,"switch", should_be_on_child_block= False))
             case Extract_Hunk_AST_Util.Construct_Flow_Type.SWITCH_CASE:
                 construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code,"switch_case", should_be_on_child_block= False))
+            # JUMPS
             case Extract_Hunk_AST_Util.Construct_Flow_Type.BREAK_STATEMENT:
                 break_dict = {
-                    "Type" : child.type,
-                    "Children" : []
+                    "Type" : child.type
                 }
                 construct_flow_dict["Children"].append(break_dict)
             case Extract_Hunk_AST_Util.Construct_Flow_Type.RETURN_STATEMENT:
                 return_dict = {
-                    "Type" : child.type,
-                    "Children" : []
+                    "Type" : child.type
                 }
                 construct_flow_dict["Children"].append(return_dict)
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.CONTINUE_STATEMENT:
+                continue_dict = {
+                    "Type" : child.type
+                }
+                construct_flow_dict["Children"].append(continue_dict)
+            
+            # EXCEPTION
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.TRY_STATEMENT:
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code, "try"))
+                for try_child in child.children:
+                    if try_child.type == "catch_clause":
+                        construct_flow_dict["Children"].append(extract_control_flow_constructs(try_child, source_code, "catch"))
+                    if try_child.type == "finally_clause":
+                        construct_flow_dict["Children"].append(extract_control_flow_constructs(try_child, source_code, "finally"))
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.TRY_WITH_RESOURCE_STATEMENT:
+                construct_flow_dict["Children"].append(extract_control_flow_constructs(child, source_code, "try_with_resource"))
+                for try_child in child.children:
+                    if try_child.type == "catch_clause":
+                        construct_flow_dict["Children"].append(extract_control_flow_constructs(try_child, source_code, "catch"))
+                    if try_child.type == "finally_clause":
+                        construct_flow_dict["Children"].append(extract_control_flow_constructs(try_child, source_code, "finally"))                
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.THROW_STATEMENT:
+                throw_dict = {
+                    "Type" : child.type
+                }
+                construct_flow_dict["Children"].append(throw_dict)
             case _:
                 continue
     return construct_flow_dict

@@ -24,6 +24,10 @@ class Construct_Flow_Type(Enum):
     SWITCH_CASE = 9
     BREAK_STATEMENT = 10
     RETURN_STATEMENT = 11
+    CONTINUE_STATEMENT = 12
+    TRY_STATEMENT = 13
+    TRY_WITH_RESOURCE_STATEMENT = 14 
+    THROW_STATEMENT = 15  
 # region GLOBAL VARIABLES
 context_is_import_mode = False
 
@@ -179,11 +183,24 @@ def get_node_construct_flow_type(node):
         return Construct_Flow_Type.SWITCH_EXPRESSION
     if node.type == "switch_block_statement_group":
         return Construct_Flow_Type.SWITCH_CASE
+    
+    # Jumps
     if node.type == "break_statement":
         return Construct_Flow_Type.BREAK_STATEMENT
     if node.type == "return_statement":
         return Construct_Flow_Type.RETURN_STATEMENT
-    
+    if node.type == "continue_statement":
+        return Construct_Flow_Type.CONTINUE_STATEMENT
+
+    # Exceptions 
+    if node.type == "try_statement":
+        return Construct_Flow_Type.TRY_STATEMENT
+    if node.type == "try_with_resources_statement":
+        return Construct_Flow_Type.TRY_WITH_RESOURCE_STATEMENT
+    if node.type == "throw_statement":
+        return Construct_Flow_Type.THROW_STATEMENT
+
+    # Ternary Expression
     if node.type in { "ternary_expression"}:
         return Construct_Flow_Type.NONE
 
