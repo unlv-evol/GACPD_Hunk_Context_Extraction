@@ -20,6 +20,12 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
     should_include_nested_classes : Should the class information output 
                                     include the nested classes (recursive)
                                     of the target class?
+    
+    Returns
+    -------
+    class_structure :   The class structure for the inputted target node.
+                        It includes class name, fields, method signatures, 
+                        and if specified, the nested classes' structures (recursively).
     """
     class_node = Extract_Hunk_AST_Util.get_context_parent_class(target_node)
     if not class_node:
@@ -79,9 +85,20 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
     
     return class_structure
 
-#TODO:
 def extract_package_information(source_code):
+    """
+    Extracts the package name from the package declaration.\n
+    CAUTION: This function uses the global vairable "current_generated_AST" from Extract_Hunk_Ast.py.\n
+    Please make sure that you have generated an AST in that file before you call this function.
     
+    Parameters
+    ----------
+    source_code :   The text that contains the source code of the generated AST.
+
+    Returns
+    -------
+    package_info : The full name of the declared package. Or Null if there is no package present in the file.
+    """
     if not Extract_Hunk_AST.current_generated_AST:
         return None
     root_node = Extract_Hunk_AST.current_generated_AST.root_node
@@ -288,37 +305,38 @@ def get_if_statement_next_if(if_statement_node):
 
     return None
 
-#TODO:
 def extract_control_flow_constructs(target_node, source_code, override_type: str = "", should_be_on_child_block: bool = True):
-    # test_temp = Extract_Hunk_AST_Util.get_node_construct_flow_type(target_node)
-    # match test_temp:
-    #     case Extract_Hunk_AST_Util.Construct_Flow_Type.IF_STATEMENT:
-    #         print("\n************IF STATEMENT*********")
-    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
-    #         print("***********************************\n")
-    #     case Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_IF_STATEMENT:
-    #         print("\n*******ELSE IF STATEMENT*********")
-    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
-    #         print("***********************************\n")
-    #     case Extract_Hunk_AST_Util.Construct_Flow_Type.ELSE_STATEMENT:
-    #         print("\n*******ELSE STATEMENT************")
-    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
-    #         print("***********************************\n")
-    #     case _:
-    #         print("\n*************default*************")
-    #         print(f'{Extract_Hunk_AST_Util.get_node_exact_string(target_node, source_code)}')
-    #         print("***********************************\n")
+    """
+    Extracts the control-flow constructs within the selected target node's encapsulating method.\n
+    Control-flow constructs can be branches, jumps, loops, exceptions, etc. \n
+    Once this function is invoked, it will call itself recursively.
+
+    Parameters
+    ----------
+    target_node : A tree-sitter node that is located within a method. Can also be the method node.
+    source_code : The text corresponding to the source code of the file that contains the method.
+    override_type : If specified, this will override the "type" of the target node. This is used 
+                    for recursive calls and should not be specified from outside the function.
+    should_be_on_child_block :  Whether the search for control-flow constructs should be performed
+                                on a "block" child of the target node, or on the target node itself.
+                                This is used for recursive calls and should not be specified from outside
+                                the function.
+
+    Returns
+    -------
+    control_flow_dict : A dictionary that contains the control-flow constructs of the method that 
+                        encapsulates the target_node. The control-flows are assembled hierarchically 
+                        based on their own parent-child relations.
+    """
     if not target_node:
-        print('1')
         return None
     
     if should_be_on_child_block:
         node_block = Extract_Hunk_AST_Util.get_node_block_child(target_node)
         if not node_block:
-            print(f'{target_node.type}, should be on child block: {should_be_on_child_block}')
             return None
     else:
-        # Some constructs don't have a block child. They usually contain the block in themeselves (like the switch cases)
+        # Some constructs don't have a block child. They usually contain the block in themselves (like the switch cases)
         node_block = target_node
 
     if override_type == "":
@@ -413,18 +431,30 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
                 continue
     return construct_flow_dict
 
-#TODO:
 def generate_structured_context_metadata(target_node, source_code):
+    """
+    Generates the comprehensive metadata for the context (in this case method) of 
+    the provided target node.
+
+    Parameters
+    ----------
+    target_node : A tree-sitter node that is located within a method or is a method node.
+    source_code : The text of the source code of the file that contains the target node.
+
+    Returns
+    -------
+    node_structured_context_metadata : The generated context dictionary for the target node context.
+    """
     method_node = Extract_Hunk_AST_Util.get_context_parent_method(target_node)
     if not method_node:
         return {}
-    node_structured_context_metadaa = {
+    node_structured_context_metadata = {
         "Encapsulating Class Information": extract_class_information(method_node, source_code, True),
-        "Package Information": extract_package_information(source_code),
+        "Declared Package": extract_package_information(source_code),
         "Globally Imported Libraries": extract_imported_libraries(source_code),
         "Invoked Methods" : extract_called_methods(method_node, source_code),
         "Referenced Classes" : extract_referenced_classes(method_node, source_code),
         "Neighboring Methods" : extract_neighboring_methods_within_same_class(method_node, source_code),
         "Control-Flow Constructs": extract_control_flow_constructs(method_node, source_code)
     }
-    return node_structured_context_metadaa
+    return node_structured_context_metadata
