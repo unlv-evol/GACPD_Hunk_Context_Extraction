@@ -48,7 +48,8 @@ def node_to_dict(node_is_import, node, source_code, short_mode: bool = False):
                 "children": []
             }
         else:
-            node_text = source_code[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+            #node_text = source_code[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+            node_text = Extract_Hunk_AST_Util.get_node_exact_string(node, source_code)
             node_dict = {
                 "type": node.type,
                 "is_named": node.is_named,

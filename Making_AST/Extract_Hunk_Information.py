@@ -80,8 +80,22 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
     return class_structure
 
 #TODO:
-def extract_package_information():
-    return []
+def extract_package_information(source_code):
+    
+    if not Extract_Hunk_AST.current_generated_AST:
+        return None
+    root_node = Extract_Hunk_AST.current_generated_AST.root_node
+    if not root_node:
+        return None
+    
+    for child in root_node.children:
+        if child.type == "package_declaration":
+            for package_child in child.children:
+                if package_child.type == "scoped_identifier":
+                    package_info = Extract_Hunk_AST_Util.get_node_exact_string(package_child, source_code)
+                    return package_info
+                
+    return None
 
 def extract_imported_libraries(source_code):
     """
@@ -406,7 +420,7 @@ def generate_structured_context_metadata(target_node, source_code):
         return {}
     node_structured_context_metadaa = {
         "Encapsulating Class Information": extract_class_information(method_node, source_code, True),
-        "Package Information": extract_package_information(),
+        "Package Information": extract_package_information(source_code),
         "Globally Imported Libraries": extract_imported_libraries(source_code),
         "Invoked Methods" : extract_called_methods(method_node, source_code),
         "Referenced Classes" : extract_referenced_classes(method_node, source_code),
