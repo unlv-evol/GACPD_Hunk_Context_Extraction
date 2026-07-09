@@ -110,6 +110,8 @@ def extract_package_information(source_code):
             for package_child in child.children:
                 if package_child.type == "scoped_identifier":
                     package_info = Extract_Hunk_AST_Util.get_node_exact_string(package_child, source_code)
+                    if ";" in package_info:
+                        package_info = package_info.split(';')[0]
                     return package_info
                 
     return None
