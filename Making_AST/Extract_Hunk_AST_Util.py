@@ -28,6 +28,7 @@ class Construct_Flow_Type(Enum):
     TRY_STATEMENT = 13
     TRY_WITH_RESOURCE_STATEMENT = 14 
     THROW_STATEMENT = 15  
+    ASSERT_STATEMENT = 16
 # region GLOBAL VARIABLES
 context_is_import_mode = False
 
@@ -200,6 +201,8 @@ def get_node_construct_flow_type(node):
     if node.type == "throw_statement":
         return Construct_Flow_Type.THROW_STATEMENT
 
+    if node.type == "assert_statement":
+        return Construct_Flow_Type.ASSERT_STATEMENT
     # Ternary Expression
     if node.type in { "ternary_expression"}:
         return Construct_Flow_Type.NONE

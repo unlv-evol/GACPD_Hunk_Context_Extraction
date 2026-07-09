@@ -390,6 +390,11 @@ def extract_control_flow_constructs(target_node, source_code, override_type: str
                     "Type" : child.type
                 }
                 construct_flow_dict["Children"].append(throw_dict)
+            case Extract_Hunk_AST_Util.Construct_Flow_Type.ASSERT_STATEMENT:
+                assert_dict = {
+                    "Type" : child.type
+                }
+                construct_flow_dict["Children"].append(assert_dict)
             case _:
                 continue
     return construct_flow_dict
