@@ -280,14 +280,14 @@ def is_context_in_class_or_method (context_node):
     
     return False
 
-def determine_hunk_import_mode (source_code_lines, hunk_start_line, hunk_end_line):
+def determine_hunk_import_mode (source_code, hunk_start_line, hunk_end_line):
     """
     Will set the value of Extract_Hunk_AST_Util.context_is_import_mode to either true or false depending
     on if all of the lines of the hunk are (import or package) lines or not. 
 
     Parameters
     ----------
-    source_code_lines:  The lines of the source code arranged in a list (use readlines() on the file).
+    source_code:        The string of the file that contains the source code of the hunk
     hunk_start_line :   The number of the starting line of the hunk (inclusive) (first line is 0).
     hunk_end_line:      The number of the ending line of the hunk (inclusive) (first line is 0).
 
@@ -299,6 +299,9 @@ def determine_hunk_import_mode (source_code_lines, hunk_start_line, hunk_end_lin
 
     """
     global context_is_import_mode
+    if not source_code:
+        return None
+    source_code_lines = source_code.splitlines()
     for line_num, line_content in enumerate(source_code_lines[hunk_start_line: hunk_end_line + 1], start= hunk_start_line):
         line_content_stripped = line_content.strip()
         # Skipping empty and comment lines

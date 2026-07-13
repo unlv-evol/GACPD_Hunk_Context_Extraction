@@ -12,9 +12,7 @@ Config.py
 
 
 #Debug Files
-Making_AST/DEBUG_Extract_Hunk.py
 API-Detection/DEBUG_Detect_API.py
-Refactoring_Detection/DEBUG_Refactoring_Detection.py
-
+___Debugging/
 #Github tokens
 *github-oauth.properties

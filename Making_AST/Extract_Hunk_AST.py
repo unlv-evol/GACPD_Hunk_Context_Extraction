@@ -81,12 +81,10 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
     immediate_context : The closest encapsulating context of the hunk. 
                         This can be an if block, a try block, or any other type of context.
     method_context :    The context of the encapsulating method.
-    class_context :     The context of the encapsulating class.
     """
     global current_generated_AST
     immediate_context = {}
     method_context = {}
-    class_context = {}
 
     # Finding the named node for the point range
     JAVA_LANGUAGE = Language(tsjava.language())
@@ -111,25 +109,23 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
             if node.type == "program":
                 immediate_context = node
             else:
-                # If the node is not the global scope ("program"), then the immediate context is always the parent of the node.
                 immediate_context = node.parent
-
                 if Extract_Hunk_AST_Util.is_context_in_method(immediate_context):
                     method_context = Extract_Hunk_AST_Util.get_context_parent_method(immediate_context)
-                if Extract_Hunk_AST_Util.is_context_in_class(immediate_context):
-                    class_context = Extract_Hunk_AST_Util.get_context_parent_class(immediate_context)
+                    if immediate_context == method_context:
+                        immediate_context = {}
 
-    return immediate_context, method_context, class_context
+    return immediate_context, method_context
 
 #TODO: Change this function's name to better indicate what it actually does and 
 #      remove any confusion about its difference with the 'find_context_node' function.
-def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end_line):
+def extract_hunk_context_from_file(java_code, hunk_start_line , hunk_end_line):
     """
     Returns the context of a hunk based on its starting and ending lines.
 
     Parameters
     ----------
-    java_file_address : Address of the original file that contains the specified hunk (and other hunks).
+    java_code : The code (string) of the source file that contains the hunk.
     hunk_start_line : The starting line of the hunk. This is inclusive.
     hunk_end_line : The ending line of the hunk. This is inclusive.
 
@@ -141,53 +137,50 @@ def extract_hunk_context_from_file(java_file_address, hunk_start_line , hunk_end
                                     Will contain both the immediate and block contexts.
     """
     
-    with open(java_file_address) as java_file:
-        Extract_Hunk_AST_Util.determine_hunk_import_mode(java_file.readlines(), hunk_start_line, hunk_end_line)
-        java_file.seek(0)
-        java_code = java_file.read()
-        code_bytes = bytes(java_code, "utf8")
-        target_point_start = (hunk_start_line, 0)
-        target_point_end = (hunk_end_line, 0)
-        immediate_context, method_context, class_context = find_context_node(code_bytes, target_point_start, target_point_end)
+    code_bytes = bytes(java_code, "utf8")
+    target_point_start = (hunk_start_line, 0)
+    target_point_end = (hunk_end_line, 0)
+    immediate_context, method_context = find_context_node(code_bytes, target_point_start, target_point_end)
 
-        immediate_context_AST_dict = {}
-        method_context_AST_dict = {}
-        class_context_AST_dict = {}
-        immediate_context_source_code = ""
-        method_context_source_code = ""
-        class_context_source_code = ""
+    immediate_context_AST_dict = {}
+    method_context_AST_dict = {}
+    immediate_context_source_code = ""
+    method_context_source_code = ""
 
-        immediate_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, immediate_context, code_bytes)
-        
-        if Extract_Hunk_AST_Util.context_is_import_mode: 
-            immediate_context_source_code = java_code.splitlines()[int(immediate_context_AST_dict['first import line']):int(immediate_context_AST_dict['last import line'])+1]
-        else:
-            immediate_context_source_code = java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
-            # Sometiems the block context and immediate context are the same, in which case to preserve space we don't 
-            # write the block context (the find_context_node function above returns a null method_context).
-            if method_context:
-                method_context_source_code = java_code.splitlines()[method_context.start_point[0]:method_context.end_point[0]+1]
-                method_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, method_context, code_bytes)
-            if class_context:
-                class_context_source_code = java_code.splitlines()[class_context.start_point[0]:class_context.end_point[0]+1]
-                class_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, class_context, code_bytes)
-
-        context_AST_output = {
-            "Is Context Import" : Extract_Hunk_AST_Util.context_is_import_mode,
-            "Immediate Context AST Representaion": immediate_context_AST_dict,
-            "Method Context AST Representation": method_context_AST_dict,
-            "Class Context AST Represenetation": class_context_AST_dict
-        }
-
-        context_source_code_output = {
-            "Is Context Import" : Extract_Hunk_AST_Util.context_is_import_mode,
-            "Immediate Context Source Code": immediate_context_source_code,
-            "Method Context Source Code": method_context_source_code,
-            "Class Context Source Code": class_context_source_code
-        }
+    # determine_hunk_import_mode will set a global value in Extract_Hunk_AST_Util that we
+    # can use later.
+    Extract_Hunk_AST_Util.determine_hunk_import_mode(java_code, hunk_start_line, hunk_end_line)
+    
+    if Extract_Hunk_AST_Util.context_is_import_mode: 
+        # When the hunk is in the imports section, we will not be working with tree-sitter nodes.
+        immediate_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, immediate_context, java_code)
+        immediate_context_source_code = java_code.splitlines()[int(immediate_context_AST_dict['first import line']):int(immediate_context_AST_dict['last import line'])+1]
+    else:
+        # Sometimes the method and the immediate context are the same, in which case the immediate will be left out as 
+        # empty and the method context will contain the context.
+        if immediate_context:
+            # immediate_context_source_code = java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
+            immediate_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, immediate_context, java_code, short_mode= True)
+            immediate_context_source_code = Extract_Hunk_AST_Util.get_node_exact_string(immediate_context, java_code)
+        if method_context:
+            method_context_source_code = java_code.splitlines()[method_context.start_point[0]:method_context.end_point[0]+1]
+            method_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, method_context, java_code, short_mode= True)
 
 
-        return context_AST_output, context_source_code_output
+    context_AST_output = {
+        "Is_Context_Import" : Extract_Hunk_AST_Util.context_is_import_mode,
+        "Immediate_AST": immediate_context_AST_dict,
+        "Method_AST": method_context_AST_dict
+    }
+
+    context_source_code_output = {
+        "Is_Context_Import" : Extract_Hunk_AST_Util.context_is_import_mode,
+        "Immediate_SC": immediate_context_source_code,
+        "Method_SC": method_context_source_code
+    }
+
+
+    return context_AST_output, context_source_code_output
 
 def find_adjacent_context(context_node):
     """
