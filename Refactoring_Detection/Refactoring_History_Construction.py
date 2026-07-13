@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+import requests
+from pathlib import Path
 
 def create_refactoring_graph_for_source_file(source_file_name, RM_result_json, output_json):
     RM_results = load_RM_result(RM_result_json)
@@ -88,3 +90,19 @@ def load_RM_result(RM_result_json):
     with open(RM_result_json, 'r', encoding = 'utf-8') as result_file:
         result = json.load(result_file)
         return result
+
+
+
+
+#TODO:
+def get_function_versions(patch_file_content):
+    """
+    Returns
+    -------
+    f_s :       Source side function before the patch
+    f_s_prime : Source side function after the patch
+    f_t :       Target side function
+    """
+    f_s, f_s_prime, f_t = {None, None, None}
+
+    return f_s, f_s_prime, f_t
