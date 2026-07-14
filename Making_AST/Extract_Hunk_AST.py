@@ -9,15 +9,51 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 import Extract_Hunk_AST_Util
 
-current_generated_AST = None
+def get_import_hunk_source_code(source_code, hunk_start_line, hunk_end_line):
+    """
+    This function only returns the imports around the specified hunk
+    (usually at the top of the file). It WILL NOT return all of the imports
+    in the file if there are imports elsewhere from the surrounding lines of the hunk.
+    """
+    source_code_lines = source_code.splitlines()
+    imports = []
+    for line in reversed(source_code_lines[:hunk_start_line + 1]):
+        line_stripped = line.strip()
+        # Skipping empty and comment lines
+        if not line_stripped or line_stripped.startswith('*') or line_stripped.startswith('/'):
+            continue
+        if line_stripped.startswith('import') or line_stripped.startswith('package'):
+            imports.insert(0 , line_stripped)
+        else:
+            break
+    for line in (source_code_lines[hunk_start_line:hunk_end_line + 1]):
+        line_stripped = line.strip()
+        if not line_stripped or line_stripped.startswith('*') or line_stripped.startswith('/'):
+            continue
+        if line_stripped.startswith('import') or line_stripped.startswith('package'):
+            imports.append(line_stripped)
+        else:
+            break
+    
+    for line in (source_code_lines[hunk_end_line:]):
+        line_stripped = line.strip()
+        if not line_stripped or line_stripped.startswith('*') or line_stripped.startswith('/'):
+            continue
+        if line_stripped.startswith('import') or line_stripped.startswith('package'):
+            imports.append(line_stripped)
+        else:
+            break
+    
+    #imports_string = '\n'.join(imports)
+    
+    return imports
 
-def node_to_dict(node_is_import, node, source_code, short_mode: bool = False):
+def context_node_to_dict(node, source_code, short_mode: bool = False):
     """
     Converts a tree-sitter node to a dictionary ready for json saving and debug printing.
 
     Parameters
     ----------
-    node_is_import :    A boolean that specifies whether the provided context node is "import" context node.
     node :              The context node from which the data for the dictionary will be extracted.
     source_code :       The source code that contains the text of the node. The source code should be in bytes.
 
@@ -28,45 +64,27 @@ def node_to_dict(node_is_import, node, source_code, short_mode: bool = False):
                         node is "import" context or not.
     """
     
-    if node_is_import:
-        import_nodes = node['import_or_package_node']
-        first_import_line = import_nodes[0].start_point[0]
-        last_import_line = import_nodes[0].end_point[0]
-        for individual_import_node in import_nodes:
-            if individual_import_node.start_point[0] < first_import_line:
-                first_import_line = individual_import_node.start_point[0]
-            if individual_import_node.end_point[0] > last_import_line:
-                last_import_line = individual_import_node.end_point[0]
+    if short_mode:
         node_dict = {
-            "first import line": first_import_line,
-            "last import line": last_import_line
-        }       
+            "type": node.type,
+            "children": []
+        }
     else:
-        if short_mode:
-            node_dict = {
-                "type": node.type,
-                "children": []
-            }
-        else:
-            #node_text = source_code[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
-            node_text = Extract_Hunk_AST_Util.get_node_exact_string(node, source_code)
-            node_dict = {
-                "type": node.type,
-                "is_named": node.is_named,
-                # "start_byte": node.start_byte,
-                # "end_byte": node.end_byte,
-                "start_point": [node.start_point[0], node.start_point[1]],  # [row, column]
-                "end_point": [node.end_point[0], node.end_point[1]],
-                "text": node_text,
-                "children": []
-            }
+        node_text = Extract_Hunk_AST_Util.get_node_exact_string(node, source_code)
+        node_dict = {
+            "type": node.type,
+            "start_point": [node.start_point[0], node.start_point[1]],
+            "end_point": [node.end_point[0], node.end_point[1]],
+            "text": node_text,
+            "children": []
+        }
 
-        for child in node.children:
-            node_dict["children"].append(node_to_dict(False, child, source_code, short_mode))
+    for child in node.children:
+        node_dict["children"].append(context_node_to_dict(child, source_code, short_mode))
             
     return node_dict
 
-def find_context_node(code_bytes, target_point_start, target_point_end):
+def find_context_node(AST, target_point_start, target_point_end):
     """
     Finds and returns the context of a section of the source code.
 
@@ -82,44 +100,31 @@ def find_context_node(code_bytes, target_point_start, target_point_end):
                         This can be an if block, a try block, or any other type of context.
     method_context :    The context of the encapsulating method.
     """
-    global current_generated_AST
+    
     immediate_context = {}
     method_context = {}
 
     # Finding the named node for the point range
     JAVA_LANGUAGE = Language(tsjava.language())
-    parser = Parser(JAVA_LANGUAGE)
-    current_generated_AST = parser.parse(code_bytes)
-    node = current_generated_AST.root_node.named_descendant_for_point_range(target_point_start, target_point_end)
+    node = AST.root_node.named_descendant_for_point_range(target_point_start, target_point_end)
 
     if not node:
         print(f'WARNING: in function find_context_node, could not find named node for point range.')
     else: 
-        # If the node is an import node, we will only return the imports
-        # sections as immediate context and nothing for block context.
-        if Extract_Hunk_AST_Util.context_is_import_mode:
-            query_string = """
-            (import_declaration) @import_or_package_node
-            (package_declaration) @import_or_package_node
-            """
-            query = Query(JAVA_LANGUAGE, query_string)
-            cursor = QueryCursor(query)
-            immediate_context = cursor.captures(current_generated_AST.root_node)
+        if node.type == "program":
+            immediate_context = node
         else:
-            if node.type == "program":
-                immediate_context = node
-            else:
-                immediate_context = node.parent
-                if Extract_Hunk_AST_Util.is_context_in_method(immediate_context):
-                    method_context = Extract_Hunk_AST_Util.get_context_parent_method(immediate_context)
-                    if immediate_context == method_context:
-                        immediate_context = {}
+            immediate_context = node.parent
+            if Extract_Hunk_AST_Util.is_context_in_method(immediate_context):
+                method_context = Extract_Hunk_AST_Util.get_context_parent_method(immediate_context)
+                if immediate_context == method_context:
+                    immediate_context = {}
 
     return immediate_context, method_context
 
 #TODO: Change this function's name to better indicate what it actually does and 
 #      remove any confusion about its difference with the 'find_context_node' function.
-def extract_hunk_context_from_file(java_code, hunk_start_line , hunk_end_line):
+def extract_hunk_context_from_file(AST, java_code, hunk_start_line , hunk_end_line):
     """
     Returns the context of a hunk based on its starting and ending lines.
 
@@ -137,44 +142,38 @@ def extract_hunk_context_from_file(java_code, hunk_start_line , hunk_end_line):
                                     Will contain both the immediate and block contexts.
     """
     
-    code_bytes = bytes(java_code, "utf8")
-    target_point_start = (hunk_start_line, 0)
-    target_point_end = (hunk_end_line, 0)
-    immediate_context, method_context = find_context_node(code_bytes, target_point_start, target_point_end)
+
 
     immediate_context_AST_dict = {}
     method_context_AST_dict = {}
     immediate_context_source_code = ""
     method_context_source_code = ""
+    is_hunk_import = Extract_Hunk_AST_Util.is_hunk_import(java_code, hunk_start_line, hunk_end_line)
 
-    # determine_hunk_import_mode will set a global value in Extract_Hunk_AST_Util that we
-    # can use later.
-    Extract_Hunk_AST_Util.determine_hunk_import_mode(java_code, hunk_start_line, hunk_end_line)
-    
-    if Extract_Hunk_AST_Util.context_is_import_mode: 
+    if is_hunk_import: 
         # When the hunk is in the imports section, we will not be working with tree-sitter nodes.
-        immediate_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, immediate_context, java_code)
-        immediate_context_source_code = java_code.splitlines()[int(immediate_context_AST_dict['first import line']):int(immediate_context_AST_dict['last import line'])+1]
+        immediate_context_source_code = get_import_hunk_source_code(java_code, hunk_start_line, hunk_end_line)
     else:
+        hunk_start_position = (hunk_start_line, 0)
+        hunk_end_position = (hunk_end_line, 0)
+        immediate_context, method_context = find_context_node(AST, hunk_start_position, hunk_end_position )
         # Sometimes the method and the immediate context are the same, in which case the immediate will be left out as 
         # empty and the method context will contain the context.
         if immediate_context:
-            # immediate_context_source_code = java_code.splitlines()[immediate_context.start_point[0]:immediate_context.end_point[0]+1]
-            immediate_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, immediate_context, java_code, short_mode= True)
+            immediate_context_AST_dict = context_node_to_dict(immediate_context, java_code, short_mode= True)
             immediate_context_source_code = Extract_Hunk_AST_Util.get_node_exact_string(immediate_context, java_code)
         if method_context:
+            method_context_AST_dict = context_node_to_dict(method_context, java_code, short_mode= True)
             method_context_source_code = java_code.splitlines()[method_context.start_point[0]:method_context.end_point[0]+1]
-            method_context_AST_dict = node_to_dict(Extract_Hunk_AST_Util.context_is_import_mode, method_context, java_code, short_mode= True)
-
-
+            
     context_AST_output = {
-        "Is_Context_Import" : Extract_Hunk_AST_Util.context_is_import_mode,
+        "Is_Hunk_Import" : is_hunk_import,
         "Immediate_AST": immediate_context_AST_dict,
         "Method_AST": method_context_AST_dict
     }
 
     context_source_code_output = {
-        "Is_Context_Import" : Extract_Hunk_AST_Util.context_is_import_mode,
+        "Is_Hunk_Import" : is_hunk_import,
         "Immediate_SC": immediate_context_source_code,
         "Method_SC": method_context_source_code
     }

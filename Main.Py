@@ -4,6 +4,8 @@ import os
 import sys
 import argparse
 from pathlib import Path
+from tree_sitter import Language, Parser, Query, QueryCursor
+import tree_sitter_java as tsjava
 from GACPD_Output_Processing.GACPD_Result_Processing import save_GACPD_result_data
 from Making_AST.GACPD_Hunk_Info_Processing import get_GACPD_hunk_info
 from Making_AST.Extract_Hunk_AST import extract_hunk_context_from_file
@@ -28,7 +30,7 @@ def main ():
      if not GACPD_hunks_info:
           print(f'Error: Could not retrieve the hunk info from the project folder')
           sys.exit()
-          
+
      main_context_save_directory = os.path.join(Config.output_folder, f'{Config.GACPD_project_folder_name}_{Config.HUNK_CONTEXT_OUTPUT_FOLDER_NAME}')
      main_context_save_directory = get_safe_abs_path(main_context_save_directory)
 
@@ -63,10 +65,15 @@ def main ():
                     # In these cases we want to skip making the directories.
                     if len(file['file hunk info']) == 0:
                          continue
+
+                    # Creating the AST's of the source and target hunks
+                    JAVA_LANGUAGE = Language(tsjava.language())
                     if os.path.isfile(file['source file address']):
                          source_code = Path(file['source file address']).read_text()
+                         source_AST = Parser(JAVA_LANGUAGE).parse(source_code.encode('utf-8'))
                     if os.path.isfile(file['target file address']):
                          target_code = Path(file['target file address']).read_text()
+                         target_AST = Parser(JAVA_LANGUAGE).parse(target_code.encode('utf-8'))
 
                     for hunk_pair_index, hunk_pair in enumerate(file['file hunk info']):
                          hunk_pair_folder_name = f'hunk_pair_{hunk_pair_index + 1}'
@@ -90,7 +97,7 @@ def main ():
 
                          if os.path.isfile(file['source file address']):
                               # Retrieving the source hunk context
-                              context_AST, context_source_code = extract_hunk_context_from_file(source_code, 
+                              context_AST, context_source_code = extract_hunk_context_from_file(source_AST, source_code, 
                                                                                                hunk_pair["source hunk"]["hunk line start"],
                                                                                                hunk_pair["source hunk"]["hunk line end"])
                               source_context_AST_address = os.path.join(source_hunk_folder_address,
@@ -107,7 +114,7 @@ def main ():
                               
                          if os.path.isfile(file['target file address']):
                               # Retrieving the target hunk context
-                              context_AST, context_source_code = extract_hunk_context_from_file(target_code, 
+                              context_AST, context_source_code = extract_hunk_context_from_file(target_AST, target_code, 
                                                                                                hunk_pair["target hunk"]["hunk line start"],
                                                                                                hunk_pair["target hunk"]["hunk line end"])
                               target_context_AST_address =  os.path.join(target_hunk_folder_address,

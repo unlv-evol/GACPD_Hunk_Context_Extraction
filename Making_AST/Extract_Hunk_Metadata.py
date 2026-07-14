@@ -85,24 +85,25 @@ def extract_class_information(target_node, source_code, should_include_nested_cl
     
     return class_structure
 
-def extract_package_information(source_code):
+def extract_package_information(AST, source_code):
     """
-    Extracts the package name from the package declaration.\n
-    CAUTION: This function uses the global vairable "current_generated_AST" from Extract_Hunk_Ast.py.\n
-    Please make sure that you have generated an AST in that file before you call this function.
+    Extracts the package name from the package declaration.
     
     Parameters
     ----------
+    AST :           The AST of the target file.
     source_code :   The text that contains the source code of the generated AST.
 
     Returns
     -------
     package_info : The full name of the declared package. Or Null if there is no package present in the file.
     """
-    if not Extract_Hunk_AST.current_generated_AST:
+    if not AST:
         return None
-    root_node = Extract_Hunk_AST.current_generated_AST.root_node
+    root_node = AST.root_node
     if not root_node:
+        return None
+    if not source_code:
         return None
     
     for child in root_node.children:
