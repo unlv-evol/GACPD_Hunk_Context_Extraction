@@ -105,7 +105,6 @@ def find_context_node(AST, target_point_start, target_point_end):
     method_context = {}
 
     # Finding the named node for the point range
-    JAVA_LANGUAGE = Language(tsjava.language())
     node = AST.root_node.named_descendant_for_point_range(target_point_start, target_point_end)
 
     if not node:
@@ -122,9 +121,7 @@ def find_context_node(AST, target_point_start, target_point_end):
 
     return immediate_context, method_context
 
-#TODO: Change this function's name to better indicate what it actually does and 
-#      remove any confusion about its difference with the 'find_context_node' function.
-def extract_hunk_context_from_file(AST, java_code, hunk_start_line , hunk_end_line):
+def get_hunk_context_info(AST, java_code, hunk_start_line , hunk_end_line):
     """
     Returns the context of a hunk based on its starting and ending lines.
 
@@ -165,7 +162,7 @@ def extract_hunk_context_from_file(AST, java_code, hunk_start_line , hunk_end_li
         if method_context:
             method_context_AST_dict = context_node_to_dict(method_context, java_code, short_mode= True)
             method_context_source_code = java_code.splitlines()[method_context.start_point[0]:method_context.end_point[0]+1]
-            
+    hunk_source_code = java_code.splitlines()[int(hunk_start_line):int(hunk_end_line) + 1]
     context_AST_output = {
         "Is_Hunk_Import" : is_hunk_import,
         "Immediate_AST": immediate_context_AST_dict,

@@ -14,5 +14,7 @@ Config.py
 #Debug Files
 API-Detection/DEBUG_Detect_API.py
 ___Debugging/
+___DEBUG_OUTPUT/
+___DEBUG_INPUT/
 #Github tokens
 *github-oauth.properties

@@ -6,9 +6,13 @@ import argparse
 from pathlib import Path
 from tree_sitter import Language, Parser, Query, QueryCursor
 import tree_sitter_java as tsjava
+from unidiff import PatchSet
 from GACPD_Output_Processing.GACPD_Result_Processing import save_GACPD_result_data
 from Making_AST.GACPD_Hunk_Info_Processing import get_GACPD_hunk_info
-from Making_AST.Extract_Hunk_AST import extract_hunk_context_from_file
+from Making_AST.Extract_Hunk_AST import get_hunk_context_info 
+from Making_AST.Extract_Hunk_AST import find_context_node
+import Making_AST.Extract_Hunk_AST_Util as Util
+from Refactoring_Detection import Retrieve_Before_PR as HistoryGetter
 
 def get_safe_abs_path(file_path):
      """
@@ -43,7 +47,8 @@ def main ():
           pr_folder_address = os.path.join(main_context_save_directory,pr_folder_name)
           if not os.path.isdir(pr_folder_address):
                os.makedirs(pr_folder_address)
-          
+          token = HistoryGetter.get_user_github_token()
+          PR_info = HistoryGetter.get_PR_info(pr['Source Repo Github'], pr['PR number'], token)
           for classification in pr['classifications']:
                if args.DebugPrint:
                     print(f'\tProcessing files with {classification["classification type"]} classification')
@@ -74,7 +79,14 @@ def main ():
                     if os.path.isfile(file['target file address']):
                          target_code = Path(file['target file address']).read_text()
                          target_AST = Parser(JAVA_LANGUAGE).parse(target_code.encode('utf-8'))
+                    
+                    pre_PR_source_code = HistoryGetter.get_file_before_PR(file['source file address'], PR_info)
 
+                    if pre_PR_source_code:
+                         pre_PR_source_AST = Parser(JAVA_LANGUAGE).parse(pre_PR_source_code.encode('utf-8'))
+                         source_diff = HistoryGetter.get_diff(pre_PR_source_code, source_code)
+                         patch = PatchSet.from_string(source_diff)
+                    
                     for hunk_pair_index, hunk_pair in enumerate(file['file hunk info']):
                          hunk_pair_folder_name = f'hunk_pair_{hunk_pair_index + 1}'
                          hunk_pair_folder_address = os.path.join(file_folder_address, hunk_pair_folder_name)
@@ -97,7 +109,7 @@ def main ():
 
                          if os.path.isfile(file['source file address']):
                               # Retrieving the source hunk context
-                              context_AST, context_source_code = extract_hunk_context_from_file(source_AST, source_code, 
+                              context_AST, context_source_code = get_hunk_context_info(source_AST, source_code, 
                                                                                                hunk_pair["source hunk"]["hunk line start"],
                                                                                                hunk_pair["source hunk"]["hunk line end"])
                               source_context_AST_address = os.path.join(source_hunk_folder_address,
@@ -112,9 +124,23 @@ def main ():
                               with open(source_context_SC_address, "w", encoding = "utf-8") as outfile:
                                    json.dump(context_source_code, outfile, indent = 4)
                               
+                              _, after_PR_method = find_context_node(source_AST, 
+                                                                     (hunk_pair["source hunk"]["hunk line start"], 0), 
+                                                                     (hunk_pair["source hunk"]["hunk line end"], 0))
+                              if after_PR_method:
+                                   before_PR_method = HistoryGetter.get_function_before_PR(patch, after_PR_method,
+                                                                                          source_code, pre_PR_source_AST, pre_PR_source_code)
+                                   before_PR_output = {
+                                        'source code': Util.get_node_exact_string(before_PR_method, pre_PR_source_code).splitlines()
+                                   }
+                                   pre_pr_source_context_SC_address = os.path.join(source_hunk_folder_address,
+                                                                                f'Pre_PR_Method.json')
+                                   with open(pre_pr_source_context_SC_address, 'w', encoding = 'utf-8') as outfile:
+                                        json.dump(before_PR_output, outfile, indent = 4)
+
                          if os.path.isfile(file['target file address']):
                               # Retrieving the target hunk context
-                              context_AST, context_source_code = extract_hunk_context_from_file(target_AST, target_code, 
+                              context_AST, context_source_code = get_hunk_context_info(target_AST, target_code, 
                                                                                                hunk_pair["target hunk"]["hunk line start"],
                                                                                                hunk_pair["target hunk"]["hunk line end"])
                               target_context_AST_address =  os.path.join(target_hunk_folder_address,

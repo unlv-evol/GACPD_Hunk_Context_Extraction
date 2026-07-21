@@ -24,6 +24,7 @@ def get_GACPD_hunk_info():
 
     general_info = []
     for PR_folder in os.listdir(GACPD_project_address):
+        source_repo_name = ""
         # Skipping hidden files that might exist due to various reasons (like OS interference)
         if PR_folder.startswith('.'):
             continue
@@ -36,6 +37,7 @@ def get_GACPD_hunk_info():
             continue
 
         PR_info = {
+            "Source Repo Github": None,
             "PR number": PR_folder.split('_')[0],
             "PR classification": PR_folder.split('_')[1],
             "classifications": []
@@ -83,6 +85,7 @@ def get_GACPD_hunk_info():
                 hunk_associated_source_file_incomplete = ''
                 hunk_associated_target_file_incomplete = ''
                 with open(result_file_address, "r", encoding= "utf-8") as opened_result_file:
+                    
                     for line in opened_result_file:
                         line = line.strip()
                         # Extracts the name of the source repository. This will be used to reconstruct
@@ -135,11 +138,10 @@ def get_GACPD_hunk_info():
                         }
 
                         file_hunks_line_info = []
-                        for individual_hunk_info in report_file_hunk_info:
-                            hunk_number = individual_hunk_info["firstFile"]["name"].split('_')[1]
-
+                        for individual_hunk_info in report_file_hunk_info:    
+                            hunk_number = individual_hunk_info["firstFile"]["name"].split('_')[1]            
                             source_hunk_start_line_number= source_hunk_line_origin_points[int(hunk_number) - 1] + individual_hunk_info["firstFile"]["start"]
-                            source_hunk_end_line_number = source_hunk_start_line_number + individual_hunk_info["lines"]
+                            source_hunk_end_line_number = source_hunk_start_line_number + individual_hunk_info["lines"] - 1
                             # print('\n###########################')
                             # print(f'source hunk name: {individual_hunk_info["firstFile"]["name"]}')
                             # print(f'{hunk_associated_source_file}')
@@ -149,8 +151,9 @@ def get_GACPD_hunk_info():
                                 "hunk line start": source_hunk_start_line_number,
                                 "hunk line end": source_hunk_end_line_number
                             }
-                            target_hunk_start_line_number = individual_hunk_info["secondFile"]["start"]
-                            target_hunk_end_line_number = target_hunk_start_line_number + individual_hunk_info["lines"]
+                            target_hunk_start_line_number = individual_hunk_info["secondFile"]["start"] 
+                            target_hunk_end_line_number = target_hunk_start_line_number + individual_hunk_info["lines"] - 1
+                            
                             # print(f'target hunk name: {individual_hunk_info["secondFile"]["name"]}')
                             # print(hunk_associated_target_file)
                             # print(f'target hunk start line is {target_hunk_start_line_number} and end line is {target_hunk_end_line_number}')
@@ -170,9 +173,9 @@ def get_GACPD_hunk_info():
 
                 classification_info["files"].append(file_info)
             PR_info["classifications"].append(classification_info)
+            PR_info["Source Repo Github"] = source_repo_name
         general_info.append(PR_info)         
                 
-
     return general_info
 
 def save_results_to_json(results):

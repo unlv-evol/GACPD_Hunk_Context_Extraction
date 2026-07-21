@@ -102,7 +102,24 @@ def get_context_parent_block (context_node):
 
     return context_node
 
-def get_method_signature (method_context_node, source_code) -> str:
+def get_method_parameter_type (parameter_node, source_code):
+    if not parameter_node:
+        print('Warning: Passed null for parameter_nodre to get_method_parameter_type')
+        return ""
+    if parameter_node.type != 'formal_parameter':
+        print('Warning: Passed non-parameter node to get_method_parameter_type')
+        return ""
+
+    for child in parameter_node.children:
+        # The first instance of "type" being in the children of the parameter node specifies the type,
+        # whether it's a custom type ("type_identifier") or default types (will have type in them along 
+        # with the name of the type like "int")
+        if 'type'in child.type or 'Type' in child.type or 'TYPE' in child.type :
+            return get_node_exact_string(child,source_code).strip()
+        
+    return ""
+
+def get_method_signature (method_context_node, source_code, strict_format: bool = False) -> str:
     """
     Returns a string that contains the signature of the inputted method context node.
 
@@ -124,15 +141,69 @@ def get_method_signature (method_context_node, source_code) -> str:
     
     signature_parts = []
     for child in method_context_node.children:
+        if child.type == 'formal_parameters':
+            for formal_parameter_child in child.children:
+                if formal_parameter_child.type == '(':
+                    signature_parts.append('(')
+                if formal_parameter_child.type == ')':
+                    signature_parts.append(')')
+                if formal_parameter_child.type == ',':
+                    signature_parts.append(',')
+                if formal_parameter_child.type == 'formal_parameter':
+                    parameter_type = get_method_parameter_type(formal_parameter_child, source_code)
+                    signature_parts.append(parameter_type)
+            continue
         if child.type == 'block':
             break
-        # source_code = source_code.encode('utf-8')
         signature_parts.append(source_code[child.start_byte:child.end_byte])
 
     method_signature = " ".join(signature_parts).strip()
-    method_signature = method_signature.replace(' (', '(')
-
+    if strict_format:
+        method_signature = " ".join((method_signature.split()))
+    method_signature = method_signature.replace(' ( ', '(')
+    method_signature = method_signature.replace(' )', ')')
+    method_signature = method_signature.replace(' ,', ',')
     return method_signature
+
+def get_method_signature_partitioned(method_context_node,source_code, strict_format: bool = False) -> str:
+    if not method_context_node:
+        print('WARNING: Passed null method context node to get_method_signature')
+        return""
+    if method_context_node.type != "method_declaration":
+        print(f'WARNING: Passed non-method node to get_method_signature. The node is {method_context_node.type}')   
+        return""
+    
+    method_name = ""
+    signature_parts = []
+    for child in method_context_node.children:
+        if child.type == 'formal_parameters':
+            for formal_parameter_child in child.children:
+                if formal_parameter_child.type == '(':
+                    signature_parts.append('(')
+                if formal_parameter_child.type == ')':
+                    signature_parts.append(')')
+                if formal_parameter_child.type == ',':
+                    signature_parts.append(',')
+                if formal_parameter_child.type == 'formal_parameter':
+                    parameter_type = get_method_parameter_type(formal_parameter_child, source_code)
+                    signature_parts.append(parameter_type)
+            continue
+        if child.type == 'identifier':
+            method_name = get_node_exact_string(child, source_code)
+            if '(' in method_name:
+                method_name = method_name.replace('(', '')
+            continue
+        if child.type == 'block':
+            break
+        signature_parts.append(source_code[child.start_byte:child.end_byte])
+
+    rest_of_method = " ".join(signature_parts).strip()
+    if strict_format:
+        rest_of_method = " ".join((rest_of_method.split()))
+    rest_of_method = rest_of_method.replace('( ', '(')
+    rest_of_method = rest_of_method.replace(' )', ')')
+    rest_of_method = rest_of_method.replace(' ,', ',')
+    return method_name, rest_of_method
 
 def get_node_block_child(node):
     """
@@ -331,11 +402,14 @@ def get_node_exact_string(node, source_code_text):
 
     return exact_string
 
-def get_node_list_exact_string(node_list, source_file_text):
+def get_node_list_exact_string(node_list, source_file_text, seperate_by_new_line : bool = False):
     output = []
     if node_list:
         for node in node_list:
-            output.append(f'{get_node_exact_string(node, source_file_text)}') 
+            if seperate_by_new_line:
+                output.append(get_node_exact_string(node, source_file_text).split('\n'))
+            else:
+                output.append(f'{get_node_exact_string(node, source_file_text)}') 
     
     return output
 
