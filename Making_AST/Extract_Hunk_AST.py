@@ -158,7 +158,7 @@ def get_hunk_context_info(AST, java_code, hunk_start_line , hunk_end_line):
         # empty and the method context will contain the context.
         if immediate_context:
             immediate_context_AST_dict = context_node_to_dict(immediate_context, java_code, short_mode= True)
-            immediate_context_source_code = Extract_Hunk_AST_Util.get_node_exact_string(immediate_context, java_code)
+            immediate_context_source_code = Extract_Hunk_AST_Util.get_node_exact_string(immediate_context, java_code).splitlines()
         if method_context:
             method_context_AST_dict = context_node_to_dict(method_context, java_code, short_mode= True)
             method_context_source_code = java_code.splitlines()[method_context.start_point[0]:method_context.end_point[0]+1]

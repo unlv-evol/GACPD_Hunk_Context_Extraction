@@ -140,8 +140,8 @@ def get_GACPD_hunk_info():
                         file_hunks_line_info = []
                         for individual_hunk_info in report_file_hunk_info:    
                             hunk_number = individual_hunk_info["firstFile"]["name"].split('_')[1]            
-                            source_hunk_start_line_number= source_hunk_line_origin_points[int(hunk_number) - 1] + individual_hunk_info["firstFile"]["start"]
-                            source_hunk_end_line_number = source_hunk_start_line_number + individual_hunk_info["lines"] - 1
+                            source_hunk_start_line_number= source_hunk_line_origin_points[int(hunk_number) - 1] + individual_hunk_info["firstFile"]["start"] - 1
+                            source_hunk_end_line_number = source_hunk_start_line_number + individual_hunk_info["lines"] - 2
                             # print('\n###########################')
                             # print(f'source hunk name: {individual_hunk_info["firstFile"]["name"]}')
                             # print(f'{hunk_associated_source_file}')
@@ -151,8 +151,8 @@ def get_GACPD_hunk_info():
                                 "hunk line start": source_hunk_start_line_number,
                                 "hunk line end": source_hunk_end_line_number
                             }
-                            target_hunk_start_line_number = individual_hunk_info["secondFile"]["start"] 
-                            target_hunk_end_line_number = target_hunk_start_line_number + individual_hunk_info["lines"] - 1
+                            target_hunk_start_line_number = individual_hunk_info["secondFile"]["start"] - 1
+                            target_hunk_end_line_number = target_hunk_start_line_number + individual_hunk_info["lines"] - 2
                             
                             # print(f'target hunk name: {individual_hunk_info["secondFile"]["name"]}')
                             # print(hunk_associated_target_file)

@@ -15,7 +15,7 @@ should_take_in_ED_files = False
 should_take_in_MO_files = True
 
 should_json_be_hierarchical = True
-
+should_generate_pre_patch_methods = True
 
 # *******************************************
 # ******************Constants*****************
