@@ -13,6 +13,7 @@ from Making_AST.Extract_Hunk_AST import get_hunk_context_info
 from Making_AST.Extract_Hunk_AST import find_context_node
 import Making_AST.Extract_Hunk_AST_Util as Util
 from Refactoring_Detection import Retrieve_Before_PR as HistoryGetter
+from GACPD_Output_Processing.GACPD_Result_Processing import get_file_result_similarity_scores
 
 def get_safe_abs_path(file_path):
      """
@@ -68,7 +69,17 @@ def main ():
                     file_folder_address = os.path.join(classification_folder_address, file_folder_name)
                     if not os.path.isdir(file_folder_address):
                          os.makedirs(file_folder_address)
-
+                    file_result_address = os.path.join(Config.GACPD_results_folder, Config.REPOS_RESULTS_FOLDER_NAME,
+                                                       Config.GACPD_project_folder_name,
+                                                       f'{pr["PR number"]}_{pr["PR classification"]}',
+                                                       pr["PR classification"], file["file name"],
+                                                       Config.RESULT_FILE_NAME)
+                    with open(file_result_address, 'r', encoding = 'utf-8') as result_file:
+                         result_content = result_file.read()
+                         similarity_scores = get_file_result_similarity_scores(result_content)
+                         similarity_score_save_location = os.path.join(file_folder_address, 'similarity_scores.json')
+                         with open(similarity_score_save_location, 'w', encoding = 'utf-8') as outfile:
+                              json.dump(similarity_scores, outfile, indent = 4)
                     # Sometimes GACPD returns no hunk info for a file (not an error).
                     # In these cases we want to skip making the directories.
                     if len(file['file hunk info']) == 0:

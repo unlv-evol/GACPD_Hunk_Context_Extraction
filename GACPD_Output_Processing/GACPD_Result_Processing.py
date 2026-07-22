@@ -15,6 +15,37 @@ import Config
 def natural_sort_key(s):
     return [int(text) if text.isdigit() else text for text in re.split(r'(\d+)', s['hunk_file_address'])]
 
+def get_file_result_similarity_scores(result : str = ""):
+    if result == "":
+        print('WARNING: fed empty result string to get_file_result_siilarity_scores')
+        return ""
+    
+    line_similarity_scores = []
+    for line in result.splitlines():
+        line = line.strip()
+        # Similarity scores
+        if line.startswith("src"):
+            line_similarity_scores.append(line)
+
+
+    # Adding the clone similarity in a hierarchical format.
+    clone_similarities_hier = {}
+    for clone_similarity in line_similarity_scores:
+        hunk_file_address, rest_of_clone_similarity = clone_similarity.split('(')
+        token_size = rest_of_clone_similarity.split(')')[0]
+        similarity_percentage = clone_similarity.split(':')[1]
+        
+        if not token_size in clone_similarities_hier:
+            clone_similarities_hier[token_size] = []
+        hunk_address_and_percentage = {
+            "hunk_file_address": hunk_file_address.strip(),
+            "hunk_similarity_percentage": similarity_percentage.strip()
+        }
+        clone_similarities_hier[token_size].append(hunk_address_and_percentage)
+        clone_similarities_hier[token_size].sort(key = natural_sort_key)
+
+    return clone_similarities_hier
+
 
 def get_GACPD_data_hierarchical(GACPD_project_address):
 
