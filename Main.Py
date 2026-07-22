@@ -113,11 +113,6 @@ def main ():
 
                          if os.path.isfile(file['source file address']):
                               # Retrieving the source hunk context
-                              if 'WalletFiles' in file['source file address']:
-                                   print(f'Hunk start line: {hunk_pair["source hunk"]["hunk line start"]} and hunk end line: {hunk_pair["source hunk"]["hunk line end"]}')
-                                   printable = source_code.splitlines()[hunk_pair["source hunk"]["hunk line start"]: hunk_pair["source hunk"]["hunk line end"] + 1]
-                                   with open('___DEBUG_OUTPUT/test_run_2.json', 'w', encoding = 'utf-8') as outfile:
-                                        json.dump(printable, outfile, indent = 4)
                               context_AST, context_source_code = get_hunk_context_info(source_AST, source_code, 
                                                                                                hunk_pair["source hunk"]["hunk line start"],
                                                                                                hunk_pair["source hunk"]["hunk line end"])
