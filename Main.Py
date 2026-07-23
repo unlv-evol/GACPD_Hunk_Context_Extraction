@@ -94,7 +94,7 @@ def main ():
                          target_code = Path(file['target file address']).read_text()
                          target_AST = Parser(JAVA_LANGUAGE).parse(target_code.encode('utf-8'))
                     
-                    if Config.should_generate_pre_patch_methods:
+                    if Config.should_generate_pre_patch_methods and os.path.isfile(file['source file address']):
                          pre_PR_source_code = HistoryGetter.get_file_before_PR(file['source file address'], PR_info)
 
                          if pre_PR_source_code:
