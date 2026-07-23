@@ -128,14 +128,13 @@ def get_file_before_PR(file_path, PR_info):
         return None
     target_branch = PR_info['base']['ref']
     PR_head_commit = PR_info['head']['sha']
+    PR_base_commit = PR_info['base']['sha']
 
-    if ensure_commit_exists(PR_head_commit, local_git_path, PR_info['number']):
-        divergence_commit_sha = get_divergence_commit(target_branch, PR_head_commit, local_git_path)
-    else:
+    if not ensure_commit_exists(PR_head_commit, local_git_path, PR_info['number']):
         print(f'Error, head commit {PR_head_commit} does not exist at all (not even in the PR)')
         return None
 
-    file_before_PR = get_file_at_commit(local_git_path, file_relative_path, divergence_commit_sha)
+    file_before_PR = get_file_at_commit(local_git_path, file_relative_path, PR_base_commit)
     if not file_before_PR:
         print('Error, could not retrieve file.')
         return None

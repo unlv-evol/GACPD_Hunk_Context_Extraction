@@ -119,19 +119,6 @@ def get_refactorings_in_PR_from_remote(RM_path, git_URL, PR_number, timeout, out
 #TODO
 def get_refactorings_in_PR(RM_path, repo_path, PR_number, output_json):
     """
-    Retreives the refactorings within a PR in a local git repo, 
-    and places the results into a json file.
-
-    Parameters
-    ----------
-    RM_path :       Path to RefactoringMiner
-    repo_path:      Path to local git repository
-    PR_number :     The number associated with the target pull request
-    output_json:    The address of a json file which will contain the results
-                    of RefactoringMiner.
-    Returns
-    -------
-    result :        The result that RefactoringMiner found. This is extracted
-                    from the saved output json and returned for convenience.
     """
+    
     pass
