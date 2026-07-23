@@ -4,7 +4,7 @@
 output_folder = ""
 GACPD_project_folder_name = ""
 GACPD_results_folder = ""
-
+Refactoring_Miner_Address = r""
 
 # *******************************************
 # ******************Controls*****************
